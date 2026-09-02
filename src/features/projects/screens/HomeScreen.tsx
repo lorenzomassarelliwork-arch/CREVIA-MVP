@@ -4,6 +4,7 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
+  Text,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -281,8 +282,6 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     </View>
   );
 }
-
-const Text = require('react-native').Text as typeof import('react-native').Text;
 
 const createStyles = (
   colors: ColorPalette,
