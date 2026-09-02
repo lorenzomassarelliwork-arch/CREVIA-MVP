@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -17,6 +18,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../../../navigation/types';
 import type { ColorPalette } from '../../../theme/colors';
 import { useAppPreferences } from '../../../theme/AppPreferencesProvider';
+import { CURRENT_USER_ID } from '../../../core/session';
+import { createApplication } from '../services/applicationService';
 import { getProjectDetail, type ProjectDetailData } from '../../projects/services/projectService';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ApplyToProject'>;
@@ -28,6 +31,7 @@ export default function ApplyToProjectScreen({ navigation, route }: Props) {
   const [data, setData] = useState<ProjectDetailData | null>(null);
   const [motivation, setMotivation] = useState('');
   const [portfolioUrl, setPortfolioUrl] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     void getProjectDetail(route.params.projectId).then(setData);
@@ -35,9 +39,14 @@ export default function ApplyToProjectScreen({ navigation, route }: Props) {
 
   const role = data?.roles.find((item) => item.id === route.params.roleId) ?? null;
 
-  const submit = () => {
+  const submit = async () => {
     if (!data || !role) {
       Alert.alert('Candidatura non disponibile', 'Il progetto o il ruolo non sono più disponibili.');
+      return;
+    }
+
+    if (data.project.ownerId === CURRENT_USER_ID) {
+      Alert.alert('Operazione non consentita', 'Non puoi candidarti a un progetto di cui sei il creatore.');
       return;
     }
 
@@ -46,11 +55,26 @@ export default function ApplyToProjectScreen({ navigation, route }: Props) {
       return;
     }
 
-    Alert.alert(
-      'Candidatura pronta',
-      'Il flusso e la validazione sono pronti. Il salvataggio reale verrà collegato al backend Supabase nella fase dedicata.',
-      [{ text: 'OK', onPress: () => navigation.goBack() }]
-    );
+    setSubmitting(true);
+    try {
+      await createApplication({
+        projectId: data.project.id,
+        roleId: role.id,
+        roleTitle: role.title,
+        applicantId: CURRENT_USER_ID,
+        motivation,
+        portfolioUrl,
+      });
+      Alert.alert(
+        'Candidatura inviata',
+        'Il responsabile del progetto potrà ora valutarla.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
+    } catch (error) {
+      Alert.alert('Candidatura non inviata', error instanceof Error ? error.message : 'Errore imprevisto.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -102,13 +126,11 @@ export default function ApplyToProjectScreen({ navigation, route }: Props) {
 
         <View style={styles.notice}>
           <Ionicons name="shield-checkmark-outline" size={20} color={colors.primary} />
-          <Text style={styles.noticeText}>
-            Il tuo profilo Crevia accompagnerà la candidatura. Non serve compilare un CV separato.
-          </Text>
+          <Text style={styles.noticeText}>Il tuo profilo Crevia accompagnerà la candidatura. Non serve compilare un CV separato.</Text>
         </View>
 
-        <TouchableOpacity style={styles.submitButton} onPress={submit} activeOpacity={0.8}>
-          <Text style={styles.submitText}>Invia candidatura</Text>
+        <TouchableOpacity style={styles.submitButton} onPress={() => void submit()} activeOpacity={0.8} disabled={submitting}>
+          {submitting ? <ActivityIndicator size="small" color={colors.white} /> : <Text style={styles.submitText}>Invia candidatura</Text>}
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -117,17 +139,7 @@ export default function ApplyToProjectScreen({ navigation, route }: Props) {
 
 const createStyles = (colors: ColorPalette, topInset: number, bottomInset: number) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  header: {
-    paddingTop: Math.max(topInset, 24) + 8,
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.cardBackground,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
+  header: { paddingTop: Math.max(topInset, 24) + 8, paddingHorizontal: 16, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.cardBackground, borderBottomWidth: 1, borderBottomColor: colors.border },
   headerButton: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.actionSurface },
   headerSpacer: { width: 42 },
   headerTitle: { color: colors.textStrong, fontSize: 16, fontWeight: '800' },
@@ -144,6 +156,6 @@ const createStyles = (colors: ColorPalette, topInset: number, bottomInset: numbe
   counter: { alignSelf: 'flex-end', color: colors.gray, fontSize: 11 },
   notice: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', backgroundColor: colors.primarySoft, borderRadius: 12, padding: 14 },
   noticeText: { flex: 1, color: colors.textMuted, fontSize: 12, lineHeight: 18 },
-  submitButton: { backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 15, alignItems: 'center' },
+  submitButton: { minHeight: 50, backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 15, alignItems: 'center', justifyContent: 'center' },
   submitText: { color: colors.white, fontSize: 15, fontWeight: '900' },
 });
