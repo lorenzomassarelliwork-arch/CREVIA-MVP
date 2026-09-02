@@ -3,7 +3,7 @@ import type { Project, ProjectRole } from '../../../domain/models';
 export const MVP_PROJECTS: Project[] = [
   {
     id: 'project-1',
-    ownerId: 'user-founder-1',
+    ownerId: 'current-user',
     title: 'GreenTrack',
     description: 'Una piattaforma per aiutare le persone a monitorare e ridurre il proprio impatto ambientale.',
     goal: 'Realizzare un prototipo mobile funzionante e validarlo con un primo gruppo di utenti.',
@@ -61,58 +61,10 @@ export const MVP_PROJECTS: Project[] = [
 ];
 
 export const MVP_PROJECT_ROLES: ProjectRole[] = [
-  {
-    id: 'role-1',
-    projectId: 'project-1',
-    title: 'Frontend Developer',
-    description: 'Sviluppo delle schermate principali e integrazione con le API del progetto.',
-    requiredSkills: ['React Native', 'TypeScript'],
-    seats: 2,
-    createdAt: '2026-09-01T10:00:00.000Z',
-  },
-  {
-    id: 'role-2',
-    projectId: 'project-1',
-    title: 'UI Designer',
-    description: 'Definizione dei flussi e rifinitura dell’interfaccia del prototipo.',
-    requiredSkills: ['Figma', 'UI Design'],
-    seats: 1,
-    createdAt: '2026-09-01T10:00:00.000Z',
-  },
-  {
-    id: 'role-3',
-    projectId: 'project-2',
-    title: 'Mobile Developer',
-    description: 'Sviluppo del prototipo mobile per il matching tra studenti.',
-    requiredSkills: ['React Native'],
-    seats: 1,
-    createdAt: '2026-09-01T11:00:00.000Z',
-  },
-  {
-    id: 'role-4',
-    projectId: 'project-2',
-    title: 'Marketing',
-    description: 'Test del posizionamento e acquisizione dei primi utenti universitari.',
-    requiredSkills: ['Marketing', 'Social Media'],
-    seats: 1,
-    createdAt: '2026-09-01T11:00:00.000Z',
-  },
-  {
-    id: 'role-5',
-    projectId: 'project-3',
-    title: 'UX Designer',
-    description: 'Ricerca con le attività locali e progettazione dei principali flussi utente.',
-    requiredSkills: ['UX Research', 'Figma'],
-    seats: 1,
-    createdAt: '2026-09-01T12:00:00.000Z',
-  },
-  {
-    id: 'role-6',
-    projectId: 'project-3',
-    title: 'Backend Developer',
-    description: 'Definizione delle API e del modello dati del prototipo.',
-    requiredSkills: ['Node.js', 'PostgreSQL'],
-    seats: 1,
-    createdAt: '2026-09-01T12:00:00.000Z',
-  },
+  { id: 'role-1', projectId: 'project-1', title: 'Frontend Developer', description: 'Sviluppo delle schermate principali e integrazione con le API del progetto.', requiredSkills: ['React Native', 'TypeScript'], seats: 2, createdAt: '2026-09-01T10:00:00.000Z' },
+  { id: 'role-2', projectId: 'project-1', title: 'UI Designer', description: 'Definizione dei flussi e rifinitura dell’interfaccia del prototipo.', requiredSkills: ['Figma', 'UI Design'], seats: 1, createdAt: '2026-09-01T10:00:00.000Z' },
+  { id: 'role-3', projectId: 'project-2', title: 'Mobile Developer', description: 'Sviluppo del prototipo mobile per il matching tra studenti.', requiredSkills: ['React Native'], seats: 1, createdAt: '2026-09-01T11:00:00.000Z' },
+  { id: 'role-4', projectId: 'project-2', title: 'Marketing', description: 'Test del posizionamento e acquisizione dei primi utenti universitari.', requiredSkills: ['Marketing', 'Social Media'], seats: 1, createdAt: '2026-09-01T11:00:00.000Z' },
+  { id: 'role-5', projectId: 'project-3', title: 'UX Designer', description: 'Ricerca con le attività locali e progettazione dei principali flussi utente.', requiredSkills: ['UX Research', 'Figma'], seats: 1, createdAt: '2026-09-01T12:00:00.000Z' },
+  { id: 'role-6', projectId: 'project-3', title: 'Backend Developer', description: 'Definizione delle API e del modello dati del prototipo.', requiredSkills: ['Node.js', 'PostgreSQL'], seats: 1, createdAt: '2026-09-01T12:00:00.000Z' },
 ];
