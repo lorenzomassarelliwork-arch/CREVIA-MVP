@@ -46,7 +46,8 @@ const FEATURED_PROJECTS: HomeProject[] = [
     nome: 'GreenTrack',
     settore: 'Tech',
     citta: 'Milano',
-    descrizione: 'Una piattaforma per aiutare le persone a monitorare e ridurre il proprio impatto ambientale.',
+    descrizione:
+      'Una piattaforma per aiutare le persone a monitorare e ridurre il proprio impatto ambientale.',
     openRoles: ['Frontend Developer', 'UI Designer'],
     builderCount: 4,
     membershipStatus: 'none',
@@ -56,7 +57,8 @@ const FEATURED_PROJECTS: HomeProject[] = [
     nome: 'UniConnect',
     settore: 'Education',
     citta: 'Milano',
-    descrizione: 'Un progetto pensato per connettere studenti con competenze complementari e idee da sviluppare insieme.',
+    descrizione:
+      'Un progetto pensato per connettere studenti con competenze complementari e idee da sviluppare insieme.',
     openRoles: ['Mobile Developer', 'Marketing'],
     builderCount: 3,
     membershipStatus: 'none',
@@ -69,7 +71,8 @@ const SAVED_PROJECTS: HomeProject[] = [
     nome: 'LocalUp',
     settore: 'Startup',
     citta: 'Milano',
-    descrizione: 'Strumenti digitali semplici per dare maggiore visibilità alle attività indipendenti di quartiere.',
+    descrizione:
+      'Strumenti digitali semplici per dare maggiore visibilità alle attività indipendenti di quartiere.',
     openRoles: ['UX Designer', 'Backend Developer'],
     builderCount: 5,
     membershipStatus: 'none',
@@ -142,20 +145,29 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           <FontAwesome5 name="building" size={17} color={colors.primary} />
         </View>
         <View style={styles.projectTitleWrap}>
-          <Text numberOfLines={1} style={styles.projectTitle}>{project.nome}</Text>
-          <Text numberOfLines={1} style={styles.projectMeta}>{project.settore} - {project.citta}</Text>
+          <Text numberOfLines={1} style={styles.projectTitle}>
+            {project.nome}
+          </Text>
+          <Text numberOfLines={1} style={styles.projectMeta}>
+            {project.settore} - {project.citta}
+          </Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.gray} />
       </View>
 
-      <Text numberOfLines={variant === 'large' ? 3 : 2} style={styles.projectDescription}>
+      <Text
+        numberOfLines={variant === 'large' ? 3 : 2}
+        style={styles.projectDescription}
+      >
         {project.descrizione}
       </Text>
 
       <View style={styles.roleRow}>
         {project.openRoles.slice(0, 2).map((role) => (
           <View key={role} style={styles.roleChip}>
-            <Text numberOfLines={1} style={styles.roleChipText}>{role}</Text>
+            <Text numberOfLines={1} style={styles.roleChipText}>
+              {role}
+            </Text>
           </View>
         ))}
       </View>
@@ -165,7 +177,9 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           <Ionicons name="people-outline" size={15} color={colors.gray} />
           <Text style={styles.projectStatText}>{project.builderCount} builders</Text>
         </View>
-        <Text style={styles.discoverText}>{project.membershipStatus === 'none' ? 'Scopri' : 'Apri'}</Text>
+        <Text style={styles.discoverText}>
+          {project.membershipStatus === 'none' ? 'Scopri' : 'Apri'}
+        </Text>
       </View>
     </TouchableOpacity>
   );
@@ -180,9 +194,15 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         )}
         {user.isOnline && <View style={styles.onlineDot} />}
       </View>
-      <Text numberOfLines={1} style={styles.builderName}>{user.displayName}</Text>
-      <Text numberOfLines={1} style={styles.builderRole}>{user.ruolo}</Text>
-      <Text numberOfLines={1} style={styles.builderMeta}>{user.citta} - {user.settore}</Text>
+      <Text numberOfLines={1} style={styles.builderName}>
+        {user.displayName}
+      </Text>
+      <Text numberOfLines={1} style={styles.builderRole}>
+        {user.ruolo}
+      </Text>
+      <Text numberOfLines={1} style={styles.builderMeta}>
+        {user.citta} - {user.settore}
+      </Text>
     </TouchableOpacity>
   );
 
@@ -230,7 +250,11 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
               <Text style={styles.sectionAction}>Vedi tutto</Text>
             </TouchableOpacity>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalList}
+          >
             {FEATURED_PROJECTS.map((project) => renderProjectCard(project, 'large'))}
           </ScrollView>
         </View>
@@ -239,7 +263,11 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Progetti salvati</Text>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalList}
+          >
             {SAVED_PROJECTS.map((project) => renderProjectCard(project, 'large'))}
           </ScrollView>
         </View>
@@ -251,32 +279,13 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
               <Text style={styles.sectionAction}>Cerca</Text>
             </TouchableOpacity>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalList}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalList}
+          >
             {BUILDERS.map(renderBuilderCard)}
           </ScrollView>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Dai tuoi seguiti</Text>
-          <View style={styles.verticalList}>
-            <View style={styles.feedCard}>
-              <View style={styles.feedHeader}>
-                <View style={styles.feedAvatar}><Text style={styles.builderInitials}>GB</Text></View>
-                <View style={styles.feedHeaderCopy}>
-                  <Text style={styles.feedName}>Giulia Bianchi</Text>
-                  <Text style={styles.feedMeta}>ha aggiornato GreenTrack</Text>
-                </View>
-                <Ionicons name="ellipsis-horizontal" size={20} color={colors.gray} />
-              </View>
-              <Text style={styles.feedBody}>
-                Abbiamo completato la prima versione del prototipo. Ora cerchiamo un frontend developer per il prossimo step.
-              </Text>
-              <View style={styles.feedActions}>
-                <View style={styles.feedAction}><Ionicons name="heart-outline" size={20} color={colors.gray} /><Text style={styles.feedActionText}>12</Text></View>
-                <View style={styles.feedAction}><Ionicons name="chatbubble-outline" size={18} color={colors.gray} /><Text style={styles.feedActionText}>3</Text></View>
-              </View>
-            </View>
-          </View>
         </View>
       </ScrollView>
     </View>
@@ -301,7 +310,12 @@ const createStyles = (
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
-    logoText: { fontSize: 24, fontWeight: 'bold', color: colors.primary, letterSpacing: 1 },
+    logoText: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: colors.primary,
+      letterSpacing: 1,
+    },
     notificationButton: {
       width: 42,
       height: 42,
@@ -325,8 +339,16 @@ const createStyles = (
       borderWidth: 1,
       borderColor: colors.cardBackground,
     },
-    notificationBadgeText: { color: colors.white, fontSize: 10, fontWeight: '800' },
-    content: { padding: 20, gap: 22, paddingBottom: 88 + Math.max(bottomInset, 10) },
+    notificationBadgeText: {
+      color: colors.white,
+      fontSize: 10,
+      fontWeight: '800',
+    },
+    content: {
+      padding: 20,
+      gap: 22,
+      paddingBottom: 88 + Math.max(bottomInset, 10),
+    },
     introBlock: {
       borderRadius: 16,
       backgroundColor: colors.cardBackground,
@@ -344,7 +366,12 @@ const createStyles = (
     },
     introCopy: { flex: 1, gap: 4 },
     greeting: { fontSize: 13, color: colors.gray, fontWeight: '600' },
-    introTitle: { fontSize: 21, fontWeight: 'bold', color: colors.secondary, lineHeight: 27 },
+    introTitle: {
+      fontSize: 21,
+      fontWeight: 'bold',
+      color: colors.secondary,
+      lineHeight: 27,
+    },
     introSubtitle: { fontSize: 14, color: colors.textMuted, lineHeight: 20 },
     searchShortcut: {
       width: 48,
@@ -355,7 +382,11 @@ const createStyles = (
       justifyContent: 'center',
     },
     section: { gap: 12 },
-    sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    sectionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
     sectionTitle: { fontSize: 19, fontWeight: 'bold', color: colors.secondary },
     sectionAction: { fontSize: 13, fontWeight: 'bold', color: colors.primary },
     horizontalList: { gap: 12, paddingRight: 20 },
@@ -387,9 +418,20 @@ const createStyles = (
     projectMeta: { fontSize: 12, color: colors.primary, fontWeight: '600' },
     projectDescription: { fontSize: 14, color: colors.secondary, lineHeight: 21 },
     roleRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-    roleChip: { maxWidth: 126, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 8, backgroundColor: colors.actionSurface },
+    roleChip: {
+      maxWidth: 126,
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+      borderRadius: 8,
+      backgroundColor: colors.actionSurface,
+    },
     roleChipText: { fontSize: 12, fontWeight: '700', color: colors.textMuted },
-    projectFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' },
+    projectFooter: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: 'auto',
+    },
     projectStat: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     projectStatText: { fontSize: 12, color: colors.gray, fontWeight: '600' },
     discoverText: { fontSize: 13, color: colors.primary, fontWeight: 'bold' },
@@ -404,7 +446,14 @@ const createStyles = (
       alignItems: 'center',
       gap: 7,
     },
-    builderAvatar: { width: 48, height: 48, borderRadius: 16, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
+    builderAvatar: {
+      width: 48,
+      height: 48,
+      borderRadius: 16,
+      backgroundColor: colors.primarySoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     builderInitials: { color: colors.primary, fontSize: 16, fontWeight: 'bold' },
     builderAvatarImage: { width: '100%', height: '100%', borderRadius: 16 },
     onlineDot: {
@@ -418,25 +467,17 @@ const createStyles = (
       borderWidth: 1,
       borderColor: colors.cardBackground,
     },
-    builderName: { fontSize: 14, fontWeight: 'bold', color: colors.secondary, textAlign: 'center' },
-    builderRole: { fontSize: 12, color: colors.primary, fontWeight: '600', textAlign: 'center' },
-    builderMeta: { fontSize: 12, color: colors.gray, textAlign: 'center' },
-    verticalList: { gap: 12 },
-    feedCard: {
-      backgroundColor: colors.cardBackground,
-      borderRadius: 16,
-      padding: 16,
-      borderWidth: 1,
-      borderColor: colors.border,
-      gap: 14,
+    builderName: {
+      fontSize: 14,
+      fontWeight: 'bold',
+      color: colors.secondary,
+      textAlign: 'center',
     },
-    feedHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    feedAvatar: { width: 42, height: 42, borderRadius: 14, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
-    feedHeaderCopy: { flex: 1, gap: 2 },
-    feedName: { fontSize: 14, fontWeight: 'bold', color: colors.secondary },
-    feedMeta: { fontSize: 12, color: colors.gray },
-    feedBody: { fontSize: 14, color: colors.secondary, lineHeight: 21 },
-    feedActions: { flexDirection: 'row', gap: 20 },
-    feedAction: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    feedActionText: { fontSize: 12, color: colors.gray, fontWeight: '600' },
+    builderRole: {
+      fontSize: 12,
+      color: colors.primary,
+      fontWeight: '600',
+      textAlign: 'center',
+    },
+    builderMeta: { fontSize: 12, color: colors.gray, textAlign: 'center' },
   });
