@@ -1,0 +1,61 @@
+export const LIGHT_COLORS = {
+  primary: '#4F6EF7',
+  secondary: '#2E201A',
+  textStrong: '#1A1A2E',
+  background: '#F8F9FF',
+  cardBackground: '#FFFFFF',
+  white: '#FFFFFF',
+  gray: '#8A8A9A',
+  border: '#E8EDFF',
+  primarySoft: '#EEF2FF',
+  surfaceMuted: '#F8F9FA',
+  actionSurface: '#F7F9FC',
+  inputSurface: '#F0F3FF',
+  divider: '#F2F4FB',
+  textMuted: '#5A5A6A',
+  toggleTrackOff: '#D7DEFB',
+  toggleTrackOn: '#AFC0FF',
+  successSoft: '#E8F8F0',
+  dangerSoft: '#FFF5F5',
+  dangerBorder: '#FFCCD1',
+  overlay: 'rgba(0,0,0,0.4)',
+  transparent: 'transparent',
+  error: '#FF3B30',
+  delete: '#FF4D4D',
+  confirm: '#2ECC71',
+  disabled: '#A0A0A0',
+} as const;
+
+export type ColorPalette = {
+  [Key in keyof typeof LIGHT_COLORS]: string;
+};
+
+export const DARK_COLORS: ColorPalette = {
+  primary: '#8097FF',
+  secondary: '#F3EDE9',
+  textStrong: '#F7F7FC',
+  background: '#10121A',
+  cardBackground: '#1A1D29',
+  white: '#FFFFFF',
+  gray: '#A3A6B5',
+  border: '#2B3042',
+  primarySoft: '#252D52',
+  surfaceMuted: '#202330',
+  actionSurface: '#202431',
+  inputSurface: '#252A3A',
+  divider: '#292D3C',
+  textMuted: '#B8BBC8',
+  toggleTrackOff: '#454B60',
+  toggleTrackOn: '#586FBF',
+  successSoft: '#19382B',
+  dangerSoft: '#3B2025',
+  dangerBorder: '#703842',
+  overlay: 'rgba(0,0,0,0.68)',
+  transparent: 'transparent',
+  error: '#FF6B63',
+  delete: '#FF7373',
+  confirm: '#4BDD8D',
+  disabled: '#686B78',
+};
+
+export const COLORS = LIGHT_COLORS;
