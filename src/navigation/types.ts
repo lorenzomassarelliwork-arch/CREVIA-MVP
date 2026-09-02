@@ -2,8 +2,9 @@ import type { NavigatorScreenParams } from '@react-navigation/native';
 
 export type MainTabParamList = {
   Home: undefined;
-  Chat: undefined;
   Search: undefined;
+  Create: undefined;
+  Chat: undefined;
   Profile: undefined;
 };
 
@@ -15,4 +16,5 @@ export type RootStackParamList = {
   ProjectDetail: { projectId: string };
   ApplyToProject: { projectId: string; roleId: string };
   ProjectApplications: { projectId: string };
+  ProjectTeam: { projectId: string };
 };

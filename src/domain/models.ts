@@ -31,6 +31,7 @@ export interface Project {
   title: string;
   description: string;
   goal: string;
+  deliverable?: string | null;
   category: string;
   coverUrl?: string | null;
   type: ProjectType;

@@ -1,221 +1,40 @@
-import { useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
 import type { RootStackParamList } from '../../../navigation/types';
 import type { ColorPalette } from '../../../theme/colors';
 import { useAppPreferences } from '../../../theme/AppPreferencesProvider';
-import { CURRENT_USER_ID } from '../../../core/session';
 import type { ProjectRole } from '../../../domain/models';
-import {
-  getCompensationLabel,
-  getLocationLabel,
-  getProjectDetail,
-  type ProjectDetailData,
-} from '../services/projectService';
+import { completeActiveProjectMembers, listProjectMembers } from '../../applications/services/applicationService';
+import { createPendingExperiences } from '../../experience/services/experienceService';
+import { getCompensationLabel, getLocationLabel, getOwnerLabel, getProjectDetail, getProjectStatusLabel, isProjectOwner, setProjectStatus, type ProjectDetailData } from '../services/projectService';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ProjectDetail'>;
 
 export default function ProjectDetailScreen({ navigation, route }: Props) {
-  const { colors } = useAppPreferences();
-  const insets = useSafeAreaInsets();
-  const styles = useMemo(() => createStyles(colors, insets.top, insets.bottom), [colors, insets.bottom, insets.top]);
-  const [data, setData] = useState<ProjectDetailData | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let active = true;
-    void getProjectDetail(route.params.projectId).then((result) => {
-      if (!active) return;
-      setData(result);
-      setLoading(false);
-    });
-    return () => {
-      active = false;
-    };
-  }, [route.params.projectId]);
-
-  if (loading) {
-    return <View style={styles.loading}><ActivityIndicator size="large" color={colors.primary} /></View>;
-  }
-
-  if (!data) {
-    return (
-      <View style={styles.loading}>
-        <Text style={styles.notFound}>Progetto non disponibile.</Text>
-        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.backLink}>Torna indietro</Text></TouchableOpacity>
-      </View>
-    );
-  }
-
-  const { project, roles } = data;
-  const isOwner = project.ownerId === CURRENT_USER_ID;
-
-  const applyForRole = (role: ProjectRole) => {
-    navigation.navigate('ApplyToProject', { projectId: project.id, roleId: role.id });
-  };
-
-  const reportProject = () => {
-    Alert.alert('Segnala progetto', 'La gestione delle segnalazioni verrà collegata al backend nella fase dedicata.');
-  };
-
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={24} color={colors.textStrong} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Progetto</Text>
-        <TouchableOpacity style={styles.headerButton} onPress={reportProject}>
-          <Ionicons name="ellipsis-horizontal" size={22} color={colors.textStrong} />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.hero}>
-          <View style={styles.categoryChip}><Text style={styles.categoryText}>{project.category}</Text></View>
-          <Text style={styles.title}>{project.title}</Text>
-          <Text style={styles.description}>{project.description}</Text>
-        </View>
-
-        {isOwner ? (
-          <TouchableOpacity
-            style={styles.ownerPanel}
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate('ProjectApplications', { projectId: project.id })}
-          >
-            <View style={styles.ownerPanelIcon}>
-              <Ionicons name="people-outline" size={21} color={colors.primary} />
-            </View>
-            <View style={styles.ownerPanelCopy}>
-              <Text style={styles.ownerPanelTitle}>Gestisci candidature</Text>
-              <Text style={styles.ownerPanelSubtitle}>Valuta i candidati e costruisci il team del progetto.</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={19} color={colors.gray} />
-          </TouchableOpacity>
-        ) : null}
-
-        <View style={styles.infoGrid}>
-          <InfoItem icon="location-outline" label="Modalità" value={getLocationLabel(project)} colors={colors} styles={styles} />
-          <InfoItem icon="time-outline" label="Durata" value={project.expectedDuration ?? 'Da definire'} colors={colors} styles={styles} />
-          <InfoItem icon="calendar-outline" label="Impegno" value={project.weeklyCommitmentHours ? `${project.weeklyCommitmentHours} h/settimana` : 'Da definire'} colors={colors} styles={styles} />
-          <InfoItem icon="cash-outline" label="Condizioni" value={getCompensationLabel(project)} colors={colors} styles={styles} />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Obiettivo</Text>
-          <Text style={styles.bodyText}>{project.goal}</Text>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Condizioni economiche</Text>
-          <View style={styles.noticeCard}>
-            <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
-            <Text style={styles.noticeText}>{project.compensationNotes ?? getCompensationLabel(project)}</Text>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Ruoli aperti</Text>
-          <Text style={styles.sectionSubtitle}>
-            {isOwner ? 'Questi sono i ruoli per cui stai cercando collaboratori.' : 'La candidatura avviene per un ruolo specifico.'}
-          </Text>
-          <View style={styles.rolesList}>
-            {roles.map((role) => (
-              <View key={role.id} style={styles.roleCard}>
-                <View style={styles.roleTopRow}>
-                  <View style={styles.roleCopy}>
-                    <Text style={styles.roleTitle}>{role.title}</Text>
-                    <Text style={styles.roleSeats}>{role.seats} {role.seats === 1 ? 'posto' : 'posti'}</Text>
-                  </View>
-                  {!isOwner ? (
-                    <TouchableOpacity style={styles.applyButton} onPress={() => applyForRole(role)}>
-                      <Text style={styles.applyButtonText}>Candidati</Text>
-                    </TouchableOpacity>
-                  ) : null}
-                </View>
-                <Text style={styles.roleDescription}>{role.description}</Text>
-                <View style={styles.skillsRow}>
-                  {role.requiredSkills.map((skill) => (
-                    <View key={skill} style={styles.skillChip}><Text style={styles.skillText}>{skill}</Text></View>
-                  ))}
-                </View>
-              </View>
-            ))}
-          </View>
-        </View>
-      </ScrollView>
-    </View>
-  );
+  const { colors } = useAppPreferences(); const insets = useSafeAreaInsets(); const styles = useMemo(() => makeStyles(colors, insets.top, insets.bottom), [colors, insets.bottom, insets.top]);
+  const [data, setData] = useState<ProjectDetailData | null>(null); const [loading, setLoading] = useState(true); const [membersCount, setMembersCount] = useState(0);
+  const load = useCallback(async () => { setLoading(true); const [detail, members] = await Promise.all([getProjectDetail(route.params.projectId), listProjectMembers(route.params.projectId)]); setData(detail); setMembersCount(members.length); setLoading(false); }, [route.params.projectId]);
+  useFocusEffect(useCallback(() => { void load(); }, [load]));
+  if (loading) return <View style={styles.loading}><ActivityIndicator size="large" color={colors.primary}/></View>;
+  if (!data) return <View style={styles.loading}><Text style={styles.notFound}>Progetto non disponibile.</Text><TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.link}>Torna indietro</Text></TouchableOpacity></View>;
+  const { project, roles } = data; const owner = isProjectOwner(project);
+  const apply = (role: ProjectRole) => { if (project.status !== 'recruiting') { Alert.alert('Candidature chiuse', 'Questo progetto non è più in fase di recruiting.'); return; } navigation.navigate('ApplyToProject', { projectId: project.id, roleId: role.id }); };
+  const startProject = async () => { if (membersCount < 1) { Alert.alert('Team non pronto', 'Accetta almeno una candidatura prima di avviare il progetto.'); return; } try { await setProjectStatus(project.id, 'active'); await load(); } catch (e) { Alert.alert('Operazione non riuscita', e instanceof Error ? e.message : 'Errore imprevisto.'); } };
+  const completeProject = () => Alert.alert('Completare il progetto?', 'Il progetto verrà chiuso e per ogni membro verrà creata un’esperienza in attesa della sua conferma.', [{text:'Annulla',style:'cancel'},{text:'Completa',onPress:async()=>{ try { const completedMembers = await completeActiveProjectMembers(project.id); const updated = await setProjectStatus(project.id,'completed'); await createPendingExperiences(updated, completedMembers); await load(); } catch(e){ Alert.alert('Operazione non riuscita',e instanceof Error?e.message:'Errore imprevisto.'); } }}]);
+  return <View style={styles.container}><View style={styles.header}><TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()}><Ionicons name="chevron-back" size={24} color={colors.textStrong}/></TouchableOpacity><Text style={styles.headerTitle}>Progetto</Text><View style={styles.headerButton}><Ionicons name="briefcase-outline" size={20} color={colors.primary}/></View></View><ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <View style={styles.hero}><View style={styles.topRow}><View style={styles.categoryChip}><Text style={styles.categoryText}>{project.category}</Text></View><View style={styles.statusChip}><Text style={styles.statusText}>{getProjectStatusLabel(project.status)}</Text></View></View><Text style={styles.title}>{project.title}</Text><Text style={styles.creator}>Creato da {getOwnerLabel(project)}</Text><Text style={styles.description}>{project.description}</Text></View>
+    {owner ? <View style={styles.ownerPanel}><Text style={styles.ownerTitle}>Gestione progetto</Text><View style={styles.ownerActions}><TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate('ProjectApplications',{projectId:project.id})}><Ionicons name="document-text-outline" size={18} color={colors.primary}/><Text style={styles.secondaryText}>Candidature</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate('ProjectTeam',{projectId:project.id})}><Ionicons name="people-outline" size={18} color={colors.primary}/><Text style={styles.secondaryText}>Team ({membersCount})</Text></TouchableOpacity></View>{project.status==='recruiting'?<TouchableOpacity style={styles.primaryButton} onPress={()=>void startProject()}><Text style={styles.primaryText}>Avvia progetto</Text></TouchableOpacity>:null}{project.status==='active'?<TouchableOpacity style={styles.primaryButton} onPress={completeProject}><Text style={styles.primaryText}>Completa progetto</Text></TouchableOpacity>:null}{project.status==='completed'?<Text style={styles.completedNote}>Progetto completato. Le esperienze dei membri sono in fase di conferma/verifica.</Text>:null}</View> : null}
+    <View style={styles.infoGrid}><Info icon="location-outline" label="Modalità" value={getLocationLabel(project)} colors={colors} styles={styles}/><Info icon="time-outline" label="Durata" value={project.expectedDuration??'Da definire'} colors={colors} styles={styles}/><Info icon="calendar-outline" label="Impegno" value={project.weeklyCommitmentHours?`${project.weeklyCommitmentHours} h/settimana`:'Da definire'} colors={colors} styles={styles}/><Info icon="cash-outline" label="Condizioni" value={getCompensationLabel(project)} colors={colors} styles={styles}/></View>
+    <Section title="Obiettivo" text={project.goal} styles={styles}/><Section title="Deliverable" text={project.deliverable??'Non specificato'} styles={styles}/>
+    <View style={styles.section}><Text style={styles.sectionTitle}>Condizioni economiche</Text><View style={styles.notice}><Ionicons name="information-circle-outline" size={20} color={colors.primary}/><Text style={styles.noticeText}>{project.compensationNotes??getCompensationLabel(project)}</Text></View></View>
+    <View style={styles.section}><Text style={styles.sectionTitle}>Ruoli</Text><Text style={styles.sectionSubtitle}>{project.status==='recruiting'?'Candidati a un ruolo specifico.':'Il recruiting per questo progetto è chiuso.'}</Text><View style={styles.rolesList}>{roles.map((role)=><View key={role.id} style={styles.roleCard}><View style={styles.roleTop}><View style={styles.flex}><Text style={styles.roleTitle}>{role.title}</Text><Text style={styles.roleSeats}>{role.seats} {role.seats===1?'posto':'posti'}</Text></View>{!owner&&project.status==='recruiting'?<TouchableOpacity style={styles.applyButton} onPress={()=>apply(role)}><Text style={styles.applyText}>Candidati</Text></TouchableOpacity>:null}</View><Text style={styles.roleDescription}>{role.description}</Text><View style={styles.skills}>{role.requiredSkills.map((skill)=><View key={skill} style={styles.skill}><Text style={styles.skillText}>{skill}</Text></View>)}</View></View>)}</View></View>
+  </ScrollView></View>;
 }
 
-type InfoItemProps = {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  value: string;
-  colors: ColorPalette;
-  styles: ReturnType<typeof createStyles>;
-};
-
-function InfoItem({ icon, label, value, colors, styles }: InfoItemProps) {
-  return (
-    <View style={styles.infoCard}>
-      <Ionicons name={icon} size={20} color={colors.primary} />
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value}</Text>
-    </View>
-  );
-}
-
-const createStyles = (colors: ColorPalette, topInset: number, bottomInset: number) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, backgroundColor: colors.background },
-  notFound: { color: colors.textStrong, fontSize: 16, fontWeight: '700' },
-  backLink: { color: colors.primary, fontWeight: '700' },
-  header: { paddingTop: Math.max(topInset, 24) + 8, paddingHorizontal: 16, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.cardBackground, borderBottomWidth: 1, borderBottomColor: colors.border },
-  headerButton: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.actionSurface },
-  headerTitle: { color: colors.textStrong, fontSize: 16, fontWeight: '800' },
-  content: { padding: 20, gap: 22, paddingBottom: 30 + bottomInset },
-  hero: { gap: 10 },
-  categoryChip: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: colors.primarySoft },
-  categoryText: { color: colors.primary, fontSize: 12, fontWeight: '800' },
-  title: { color: colors.textStrong, fontSize: 28, lineHeight: 34, fontWeight: '900' },
-  description: { color: colors.textMuted, fontSize: 15, lineHeight: 23 },
-  ownerPanel: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.cardBackground, padding: 15 },
-  ownerPanelIcon: { width: 42, height: 42, borderRadius: 12, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
-  ownerPanelCopy: { flex: 1, gap: 3 },
-  ownerPanelTitle: { color: colors.textStrong, fontSize: 14, fontWeight: '900' },
-  ownerPanelSubtitle: { color: colors.textMuted, fontSize: 12, lineHeight: 17 },
-  infoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  infoCard: { width: '48%', minHeight: 104, borderRadius: 14, backgroundColor: colors.cardBackground, borderWidth: 1, borderColor: colors.border, padding: 14, gap: 5 },
-  infoLabel: { color: colors.gray, fontSize: 11, fontWeight: '700' },
-  infoValue: { color: colors.textStrong, fontSize: 13, fontWeight: '800', lineHeight: 18 },
-  section: { gap: 10 },
-  sectionTitle: { color: colors.textStrong, fontSize: 19, fontWeight: '900' },
-  sectionSubtitle: { color: colors.gray, fontSize: 13 },
-  bodyText: { color: colors.textMuted, fontSize: 15, lineHeight: 23 },
-  noticeCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.cardBackground, padding: 14 },
-  noticeText: { flex: 1, color: colors.textMuted, fontSize: 13, lineHeight: 19 },
-  rolesList: { gap: 12 },
-  roleCard: { borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.cardBackground, padding: 16, gap: 12 },
-  roleTopRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  roleCopy: { flex: 1, gap: 2 },
-  roleTitle: { color: colors.textStrong, fontSize: 16, fontWeight: '900' },
-  roleSeats: { color: colors.gray, fontSize: 12, fontWeight: '600' },
-  roleDescription: { color: colors.textMuted, fontSize: 14, lineHeight: 21 },
-  applyButton: { backgroundColor: colors.primary, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 },
-  applyButtonText: { color: colors.white, fontSize: 13, fontWeight: '900' },
-  skillsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  skillChip: { paddingHorizontal: 9, paddingVertical: 6, borderRadius: 8, backgroundColor: colors.actionSurface },
-  skillText: { color: colors.textMuted, fontSize: 11, fontWeight: '700' },
-});
+function Section({title,text,styles}:{title:string;text:string;styles:ReturnType<typeof makeStyles>}){return <View style={styles.section}><Text style={styles.sectionTitle}>{title}</Text><Text style={styles.body}>{text}</Text></View>}
+function Info({icon,label,value,colors,styles}:{icon:keyof typeof Ionicons.glyphMap;label:string;value:string;colors:ColorPalette;styles:ReturnType<typeof makeStyles>}){return <View style={styles.infoCard}><Ionicons name={icon} size={20} color={colors.primary}/><Text style={styles.infoLabel}>{label}</Text><Text style={styles.infoValue}>{value}</Text></View>}
+const makeStyles=(c:ColorPalette,top:number,bottom:number)=>StyleSheet.create({container:{flex:1,backgroundColor:c.background},loading:{flex:1,alignItems:'center',justifyContent:'center',gap:12,backgroundColor:c.background},notFound:{color:c.textStrong,fontSize:16,fontWeight:'700'},link:{color:c.primary,fontWeight:'700'},header:{paddingTop:Math.max(top,24)+8,paddingHorizontal:16,paddingBottom:12,flexDirection:'row',alignItems:'center',justifyContent:'space-between',backgroundColor:c.cardBackground,borderBottomWidth:1,borderBottomColor:c.border},headerButton:{width:42,height:42,borderRadius:12,alignItems:'center',justifyContent:'center',backgroundColor:c.actionSurface},headerTitle:{fontSize:16,fontWeight:'800',color:c.textStrong},content:{padding:20,gap:22,paddingBottom:30+bottom},hero:{gap:9},topRow:{flexDirection:'row',justifyContent:'space-between'},categoryChip:{paddingHorizontal:10,paddingVertical:6,borderRadius:8,backgroundColor:c.primarySoft},categoryText:{color:c.primary,fontSize:12,fontWeight:'800'},statusChip:{paddingHorizontal:10,paddingVertical:6,borderRadius:999,backgroundColor:c.actionSurface},statusText:{color:c.textMuted,fontSize:11,fontWeight:'800'},title:{fontSize:28,lineHeight:34,fontWeight:'900',color:c.textStrong},creator:{fontSize:12,fontWeight:'700',color:c.primary},description:{fontSize:15,lineHeight:23,color:c.textMuted},ownerPanel:{gap:12,padding:16,borderRadius:16,borderWidth:1,borderColor:c.border,backgroundColor:c.cardBackground},ownerTitle:{fontSize:16,fontWeight:'900',color:c.textStrong},ownerActions:{flexDirection:'row',gap:10},secondaryButton:{flex:1,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:7,paddingVertical:12,borderRadius:11,backgroundColor:c.actionSurface},secondaryText:{fontSize:12,fontWeight:'800',color:c.primary},primaryButton:{alignItems:'center',paddingVertical:13,borderRadius:11,backgroundColor:c.primary},primaryText:{color:c.white,fontWeight:'900'},completedNote:{fontSize:12,lineHeight:18,color:c.textMuted},infoGrid:{flexDirection:'row',flexWrap:'wrap',gap:10},infoCard:{width:'48%',minHeight:104,borderRadius:14,backgroundColor:c.cardBackground,borderWidth:1,borderColor:c.border,padding:14,gap:5},infoLabel:{fontSize:11,fontWeight:'700',color:c.gray},infoValue:{fontSize:13,fontWeight:'800',lineHeight:18,color:c.textStrong},section:{gap:10},sectionTitle:{fontSize:19,fontWeight:'900',color:c.textStrong},sectionSubtitle:{fontSize:13,color:c.gray},body:{fontSize:15,lineHeight:23,color:c.textMuted},notice:{flexDirection:'row',gap:10,padding:14,borderRadius:14,borderWidth:1,borderColor:c.border,backgroundColor:c.cardBackground},noticeText:{flex:1,fontSize:13,lineHeight:19,color:c.textMuted},rolesList:{gap:12},roleCard:{padding:16,gap:12,borderRadius:16,borderWidth:1,borderColor:c.border,backgroundColor:c.cardBackground},roleTop:{flexDirection:'row',alignItems:'center',gap:12},flex:{flex:1},roleTitle:{fontSize:16,fontWeight:'900',color:c.textStrong},roleSeats:{fontSize:12,fontWeight:'600',color:c.gray},roleDescription:{fontSize:14,lineHeight:21,color:c.textMuted},applyButton:{paddingHorizontal:14,paddingVertical:10,borderRadius:10,backgroundColor:c.primary},applyText:{fontSize:13,fontWeight:'900',color:c.white},skills:{flexDirection:'row',flexWrap:'wrap',gap:8},skill:{paddingHorizontal:9,paddingVertical:6,borderRadius:8,backgroundColor:c.actionSurface},skillText:{fontSize:11,fontWeight:'700',color:c.textMuted}});
