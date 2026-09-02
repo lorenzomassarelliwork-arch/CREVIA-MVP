@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "crevia",
+    "slug": "crevia-mvp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.crevia.mvp"
+    },
+    "web": {}
+  }
+}
