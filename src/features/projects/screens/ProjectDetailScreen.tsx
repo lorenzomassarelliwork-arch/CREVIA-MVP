@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../../../navigation/types';
 import type { ColorPalette } from '../../../theme/colors';
 import { useAppPreferences } from '../../../theme/AppPreferencesProvider';
+import { CURRENT_USER_ID } from '../../../core/session';
 import type { ProjectRole } from '../../../domain/models';
 import {
   getCompensationLabel,
@@ -45,31 +46,23 @@ export default function ProjectDetailScreen({ navigation, route }: Props) {
   }, [route.params.projectId]);
 
   if (loading) {
-    return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
+    return <View style={styles.loading}><ActivityIndicator size="large" color={colors.primary} /></View>;
   }
 
   if (!data) {
     return (
       <View style={styles.loading}>
         <Text style={styles.notFound}>Progetto non disponibile.</Text>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backLink}>Torna indietro</Text>
-        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.backLink}>Torna indietro</Text></TouchableOpacity>
       </View>
     );
   }
 
   const { project, roles } = data;
+  const isOwner = project.ownerId === CURRENT_USER_ID;
 
   const applyForRole = (role: ProjectRole) => {
-    navigation.navigate('ApplyToProject', {
-      projectId: project.id,
-      roleId: role.id,
-    });
+    navigation.navigate('ApplyToProject', { projectId: project.id, roleId: role.id });
   };
 
   const reportProject = () => {
@@ -90,12 +83,27 @@ export default function ProjectDetailScreen({ navigation, route }: Props) {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>
-          <View style={styles.categoryChip}>
-            <Text style={styles.categoryText}>{project.category}</Text>
-          </View>
+          <View style={styles.categoryChip}><Text style={styles.categoryText}>{project.category}</Text></View>
           <Text style={styles.title}>{project.title}</Text>
           <Text style={styles.description}>{project.description}</Text>
         </View>
+
+        {isOwner ? (
+          <TouchableOpacity
+            style={styles.ownerPanel}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('ProjectApplications', { projectId: project.id })}
+          >
+            <View style={styles.ownerPanelIcon}>
+              <Ionicons name="people-outline" size={21} color={colors.primary} />
+            </View>
+            <View style={styles.ownerPanelCopy}>
+              <Text style={styles.ownerPanelTitle}>Gestisci candidature</Text>
+              <Text style={styles.ownerPanelSubtitle}>Valuta i candidati e costruisci il team del progetto.</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={19} color={colors.gray} />
+          </TouchableOpacity>
+        ) : null}
 
         <View style={styles.infoGrid}>
           <InfoItem icon="location-outline" label="Modalità" value={getLocationLabel(project)} colors={colors} styles={styles} />
@@ -113,15 +121,15 @@ export default function ProjectDetailScreen({ navigation, route }: Props) {
           <Text style={styles.sectionTitle}>Condizioni economiche</Text>
           <View style={styles.noticeCard}>
             <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
-            <Text style={styles.noticeText}>
-              {project.compensationNotes ?? getCompensationLabel(project)}
-            </Text>
+            <Text style={styles.noticeText}>{project.compensationNotes ?? getCompensationLabel(project)}</Text>
           </View>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Ruoli aperti</Text>
-          <Text style={styles.sectionSubtitle}>La candidatura avviene per un ruolo specifico.</Text>
+          <Text style={styles.sectionSubtitle}>
+            {isOwner ? 'Questi sono i ruoli per cui stai cercando collaboratori.' : 'La candidatura avviene per un ruolo specifico.'}
+          </Text>
           <View style={styles.rolesList}>
             {roles.map((role) => (
               <View key={role.id} style={styles.roleCard}>
@@ -130,16 +138,16 @@ export default function ProjectDetailScreen({ navigation, route }: Props) {
                     <Text style={styles.roleTitle}>{role.title}</Text>
                     <Text style={styles.roleSeats}>{role.seats} {role.seats === 1 ? 'posto' : 'posti'}</Text>
                   </View>
-                  <TouchableOpacity style={styles.applyButton} onPress={() => applyForRole(role)}>
-                    <Text style={styles.applyButtonText}>Candidati</Text>
-                  </TouchableOpacity>
+                  {!isOwner ? (
+                    <TouchableOpacity style={styles.applyButton} onPress={() => applyForRole(role)}>
+                      <Text style={styles.applyButtonText}>Candidati</Text>
+                    </TouchableOpacity>
+                  ) : null}
                 </View>
                 <Text style={styles.roleDescription}>{role.description}</Text>
                 <View style={styles.skillsRow}>
                   {role.requiredSkills.map((skill) => (
-                    <View key={skill} style={styles.skillChip}>
-                      <Text style={styles.skillText}>{skill}</Text>
-                    </View>
+                    <View key={skill} style={styles.skillChip}><Text style={styles.skillText}>{skill}</Text></View>
                   ))}
                 </View>
               </View>
@@ -174,17 +182,7 @@ const createStyles = (colors: ColorPalette, topInset: number, bottomInset: numbe
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, backgroundColor: colors.background },
   notFound: { color: colors.textStrong, fontSize: 16, fontWeight: '700' },
   backLink: { color: colors.primary, fontWeight: '700' },
-  header: {
-    paddingTop: Math.max(topInset, 24) + 8,
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.cardBackground,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
+  header: { paddingTop: Math.max(topInset, 24) + 8, paddingHorizontal: 16, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.cardBackground, borderBottomWidth: 1, borderBottomColor: colors.border },
   headerButton: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.actionSurface },
   headerTitle: { color: colors.textStrong, fontSize: 16, fontWeight: '800' },
   content: { padding: 20, gap: 22, paddingBottom: 30 + bottomInset },
@@ -193,6 +191,11 @@ const createStyles = (colors: ColorPalette, topInset: number, bottomInset: numbe
   categoryText: { color: colors.primary, fontSize: 12, fontWeight: '800' },
   title: { color: colors.textStrong, fontSize: 28, lineHeight: 34, fontWeight: '900' },
   description: { color: colors.textMuted, fontSize: 15, lineHeight: 23 },
+  ownerPanel: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.cardBackground, padding: 15 },
+  ownerPanelIcon: { width: 42, height: 42, borderRadius: 12, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  ownerPanelCopy: { flex: 1, gap: 3 },
+  ownerPanelTitle: { color: colors.textStrong, fontSize: 14, fontWeight: '900' },
+  ownerPanelSubtitle: { color: colors.textMuted, fontSize: 12, lineHeight: 17 },
   infoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   infoCard: { width: '48%', minHeight: 104, borderRadius: 14, backgroundColor: colors.cardBackground, borderWidth: 1, borderColor: colors.border, padding: 14, gap: 5 },
   infoLabel: { color: colors.gray, fontSize: 11, fontWeight: '700' },
