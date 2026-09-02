@@ -9,6 +9,8 @@ import LoginScreen from './src/features/auth/screens/LoginScreen';
 import RegisterScreen from './src/features/auth/screens/RegisterScreen';
 import ForgotPasswordScreen from './src/features/auth/screens/ForgotPasswordScreen';
 import HomeScreen from './src/features/projects/screens/HomeScreen';
+import ProjectDetailScreen from './src/features/projects/screens/ProjectDetailScreen';
+import ApplyToProjectScreen from './src/features/applications/screens/ApplyToProjectScreen';
 import SearchScreen from './src/features/projects/screens/SearchScreen';
 import ChatsScreen from './src/features/chat/screens/ChatsScreen';
 import ProfileScreen from './src/features/profile/screens/ProfileScreen';
@@ -59,6 +61,8 @@ function AppNavigator() {
           <Stack.Screen name="Register" component={RegisterScreen} />
           <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
           <Stack.Screen name="Main" component={MainTabs} options={{ gestureEnabled: false }} />
+          <Stack.Screen name="ProjectDetail" component={ProjectDetailScreen} />
+          <Stack.Screen name="ApplyToProject" component={ApplyToProjectScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </>
