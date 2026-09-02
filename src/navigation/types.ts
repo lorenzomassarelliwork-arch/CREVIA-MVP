@@ -14,4 +14,5 @@ export type RootStackParamList = {
   Main: NavigatorScreenParams<MainTabParamList> | undefined;
   ProjectDetail: { projectId: string };
   ApplyToProject: { projectId: string; roleId: string };
+  ProjectApplications: { projectId: string };
 };
