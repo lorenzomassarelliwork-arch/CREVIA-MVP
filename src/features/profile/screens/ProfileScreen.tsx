@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -21,6 +21,7 @@ import { CURRENT_USER_ID } from '../../../core/session';
 import type { MainTabParamList, RootStackParamList } from '../../../navigation/types';
 import type { ColorPalette } from '../../../theme/colors';
 import { useAppPreferences } from '../../../theme/AppPreferencesProvider';
+import { confirmExperience } from '../../experience/services/experienceService';
 import {
   getProfileOverview,
   type ProfileOverview,
@@ -76,6 +77,17 @@ export default function ProfileScreen({ navigation }: Props) {
 
   const { profile, createdProjects, participatedProjects, experiences } =
     overview;
+
+  const confirmPendingExperience = async (experienceId: string) => {
+    try {
+      await confirmExperience(experienceId, CURRENT_USER_ID);
+      await load();
+    } catch (error) {
+      console.warn(
+        error instanceof Error ? error.message : 'Conferma esperienza fallita.'
+      );
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -217,9 +229,25 @@ export default function ProfileScreen({ navigation }: Props) {
                       Esperienza verificata tramite Crevia
                     </Text>
                   </View>
+                ) : experience.verificationStatus === 'pending' ? (
+                  <View style={styles.pendingWrap}>
+                    <Text style={styles.pendingText}>
+                      Questa esperienza attende la tua conferma.
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.confirmExperienceButton}
+                      onPress={() =>
+                        void confirmPendingExperience(experience.id)
+                      }
+                    >
+                      <Text style={styles.confirmExperienceText}>
+                        Conferma esperienza
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 ) : (
                   <Text style={styles.pendingText}>
-                    In attesa della conferma del partecipante.
+                    Esperienza contestata.
                   </Text>
                 )}
               </TouchableOpacity>
@@ -284,7 +312,7 @@ function SectionCard({
 }: {
   title: string;
   styles: ReturnType<typeof makeStyles>;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <View style={styles.section}>
@@ -540,7 +568,20 @@ const makeStyles = (c: ColorPalette, top: number, bottom: number) =>
     experienceDates: { fontSize: 11, color: c.gray },
     verifiedLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     verifiedText: { fontSize: 11, fontWeight: '800', color: c.confirm },
+    pendingWrap: { gap: 8 },
     pendingText: { fontSize: 11, color: c.gray },
+    confirmExperienceButton: {
+      alignSelf: 'flex-start',
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      borderRadius: 9,
+      backgroundColor: c.primary,
+    },
+    confirmExperienceText: {
+      fontSize: 11,
+      fontWeight: '900',
+      color: c.white,
+    },
     projectCard: {
       flexDirection: 'row',
       alignItems: 'center',
