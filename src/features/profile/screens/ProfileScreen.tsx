@@ -174,18 +174,9 @@ export default function ProfileScreen({ navigation }: Props) {
 
           {experiences.length > 0 ? (
             experiences.map(({ experience, project }) => (
-              <TouchableOpacity
+              <View
                 key={experience.id}
-                activeOpacity={project ? 0.75 : 1}
                 style={styles.experienceCard}
-                onPress={
-                  project
-                    ? () =>
-                        navigation.navigate('ProjectDetail', {
-                          projectId: project.id,
-                        })
-                    : undefined
-                }
               >
                 <View style={styles.experienceTop}>
                   <View style={styles.experienceIcon}>
@@ -252,7 +243,27 @@ export default function ProfileScreen({ navigation }: Props) {
                     Esperienza contestata.
                   </Text>
                 )}
-              </TouchableOpacity>
+
+                {project ? (
+                  <TouchableOpacity
+                    style={styles.experienceProjectButton}
+                    onPress={() =>
+                      navigation.navigate('ProjectDetail', {
+                        projectId: project.id,
+                      })
+                    }
+                  >
+                    <Text style={styles.experienceProjectText}>
+                      Apri progetto
+                    </Text>
+                    <Ionicons
+                      name="chevron-forward"
+                      size={15}
+                      color={colors.primary}
+                    />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
             ))
           ) : (
             <View style={styles.emptyCard}>
@@ -583,6 +594,18 @@ const makeStyles = (c: ColorPalette, top: number, bottom: number) =>
       fontSize: 11,
       fontWeight: '900',
       color: c.white,
+    },
+    experienceProjectButton: {
+      alignSelf: 'flex-start',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingVertical: 3,
+    },
+    experienceProjectText: {
+      fontSize: 11,
+      fontWeight: '900',
+      color: c.primary,
     },
     projectCard: {
       flexDirection: 'row',
