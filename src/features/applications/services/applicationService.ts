@@ -287,6 +287,31 @@ export async function finalizeProjectMembers(
   );
 }
 
+export async function removeProjectMember(memberId: string): Promise<ProjectMember> {
+  const member = members.find((item) => item.id === memberId);
+  if (!member) throw new Error('Partecipante non trovato.');
+
+  const detail = await getProjectDetail(member.projectId);
+  if (!detail) throw new Error('Progetto non trovato.');
+  if (!isProjectOwner(detail.project)) {
+    throw new Error('Solo il creator può rimuovere un partecipante.');
+  }
+  if (detail.project.status !== 'recruiting' && detail.project.status !== 'active') {
+    throw new Error('Non puoi modificare il team di un progetto chiuso.');
+  }
+  if (member.status !== 'active') {
+    throw new Error('Questo partecipante non è più attivo nel progetto.');
+  }
+
+  const updated: ProjectMember = {
+    ...member,
+    status: 'removed',
+  };
+
+  members = members.map((item) => (item.id === memberId ? updated : item));
+  return updated;
+}
+
 export async function closeActiveMembersForProject(
   projectId: string
 ): Promise<void> {
