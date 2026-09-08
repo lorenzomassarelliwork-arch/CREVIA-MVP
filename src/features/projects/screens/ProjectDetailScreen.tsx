@@ -1,23 +1,714 @@
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { CURRENT_USER_ID } from '../../../core/session';
+import type { ProjectMember, ProjectRole } from '../../../domain/models';
 import type { RootStackParamList } from '../../../navigation/types';
 import type { ColorPalette } from '../../../theme/colors';
 import { useAppPreferences } from '../../../theme/AppPreferencesProvider';
-import type { ProjectRole } from '../../../domain/models';
-import { listProjectMembers } from '../../applications/services/applicationService';
-import { getCompensationLabel, getLocationLabel, getOwnerLabel, getProjectDetail, getProjectStatusLabel, isProjectOwner, setProjectStatus, type ProjectDetailData } from '../services/projectService';
+import {
+  closeActiveMembersForProject,
+  closePendingApplicationsForProject,
+  getApplicationForUserRole,
+  listProjectMembers,
+} from '../../applications/services/applicationService';
+import {
+  getCompensationLabel,
+  getLocationLabel,
+  getOwnerLabel,
+  getProjectDetail,
+  getProjectStatusLabel,
+  isProjectOwner,
+  setProjectStatus,
+  type ProjectDetailData,
+} from '../services/projectService';
+import {
+  isProjectSaved,
+  toggleSavedProject,
+} from '../services/savedProjectService';
 
-type Props=NativeStackScreenProps<RootStackParamList,'ProjectDetail'>;
-export default function ProjectDetailScreen({navigation,route}:Props){const{colors}=useAppPreferences();const insets=useSafeAreaInsets();const styles=useMemo(()=>makeStyles(colors,insets.top,insets.bottom),[colors,insets.bottom,insets.top]);const[data,setData]=useState<ProjectDetailData|null>(null);const[loading,setLoading]=useState(true);const[membersCount,setMembersCount]=useState(0);
- const load=useCallback(async()=>{setLoading(true);const[detail,members]=await Promise.all([getProjectDetail(route.params.projectId),listProjectMembers(route.params.projectId)]);setData(detail);setMembersCount(members.length);setLoading(false)},[route.params.projectId]);useFocusEffect(useCallback(()=>{void load()},[load]));
- if(loading)return <View style={styles.loading}><ActivityIndicator size="large" color={colors.primary}/></View>;if(!data)return <View style={styles.loading}><Text style={styles.notFound}>Progetto non disponibile.</Text><TouchableOpacity onPress={()=>navigation.goBack()}><Text style={styles.link}>Torna indietro</Text></TouchableOpacity></View>;
- const{project,roles}=data;const owner=isProjectOwner(project);const apply=(role:ProjectRole)=>{if(project.status!=='recruiting'){Alert.alert('Candidature chiuse','Questo progetto non è più in fase di recruiting.');return}navigation.navigate('ApplyToProject',{projectId:project.id,roleId:role.id})};const start=async()=>{if(membersCount<1){Alert.alert('Team non pronto','Accetta almeno una candidatura prima di avviare il progetto.');return}try{await setProjectStatus(project.id,'active');await load()}catch(e){Alert.alert('Operazione non riuscita',e instanceof Error?e.message:'Errore imprevisto.')}};
- return <View style={styles.container}><View style={styles.header}><TouchableOpacity style={styles.headerButton} onPress={()=>navigation.goBack()}><Ionicons name="chevron-back" size={24} color={colors.textStrong}/></TouchableOpacity><Text style={styles.headerTitle}>Progetto</Text><View style={styles.headerButton}><Ionicons name="briefcase-outline" size={20} color={colors.primary}/></View></View><ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}><View style={styles.hero}><View style={styles.topRow}><View style={styles.categoryChip}><Text style={styles.categoryText}>{project.category}</Text></View><View style={styles.statusChip}><Text style={styles.statusText}>{getProjectStatusLabel(project.status)}</Text></View></View><Text style={styles.title}>{project.title}</Text><Text style={styles.creator}>Creato da {getOwnerLabel(project)}</Text><Text style={styles.description}>{project.description}</Text></View>
- {owner?<View style={styles.ownerPanel}><Text style={styles.ownerTitle}>Gestione progetto</Text><View style={styles.ownerActions}><TouchableOpacity style={styles.secondaryButton} onPress={()=>navigation.navigate('ProjectApplications',{projectId:project.id})}><Ionicons name="document-text-outline" size={18} color={colors.primary}/><Text style={styles.secondaryText}>Candidature</Text></TouchableOpacity><TouchableOpacity style={styles.secondaryButton} onPress={()=>navigation.navigate('ProjectTeam',{projectId:project.id})}><Ionicons name="people-outline" size={18} color={colors.primary}/><Text style={styles.secondaryText}>Team ({membersCount})</Text></TouchableOpacity></View>{project.status==='recruiting'?<TouchableOpacity style={styles.primaryButton} onPress={()=>void start()}><Text style={styles.primaryText}>Avvia progetto</Text></TouchableOpacity>:null}{project.status==='active'?<TouchableOpacity style={styles.primaryButton} onPress={()=>navigation.navigate('CompleteProject',{projectId:project.id})}><Text style={styles.primaryText}>Completa progetto</Text></TouchableOpacity>:null}{project.status==='completed'?<Text style={styles.completedNote}>Progetto completato. Le esperienze dei membri selezionati attendono la conferma personale.</Text>:null}</View>:null}
- <View style={styles.infoGrid}><Info icon="location-outline" label="Modalità" value={getLocationLabel(project)} colors={colors} styles={styles}/><Info icon="time-outline" label="Durata" value={project.expectedDuration??'Da definire'} colors={colors} styles={styles}/><Info icon="calendar-outline" label="Impegno" value={project.weeklyCommitmentHours?`${project.weeklyCommitmentHours} h/settimana`:'Da definire'} colors={colors} styles={styles}/><Info icon="cash-outline" label="Condizioni" value={getCompensationLabel(project)} colors={colors} styles={styles}/></View><Section title="Obiettivo" text={project.goal} styles={styles}/><Section title="Deliverable" text={project.deliverable??'Non specificato'} styles={styles}/><View style={styles.section}><Text style={styles.sectionTitle}>Condizioni economiche</Text><View style={styles.notice}><Ionicons name="information-circle-outline" size={20} color={colors.primary}/><Text style={styles.noticeText}>{project.compensationNotes??getCompensationLabel(project)}</Text></View></View><View style={styles.section}><Text style={styles.sectionTitle}>Ruoli</Text><Text style={styles.sectionSubtitle}>{project.status==='recruiting'?'Candidati a un ruolo specifico.':'Il recruiting per questo progetto è chiuso.'}</Text><View style={styles.rolesList}>{roles.map((role)=><View key={role.id} style={styles.roleCard}><View style={styles.roleTop}><View style={styles.flex}><Text style={styles.roleTitle}>{role.title}</Text><Text style={styles.roleSeats}>{role.seats} {role.seats===1?'posto':'posti'}</Text></View>{!owner&&project.status==='recruiting'?<TouchableOpacity style={styles.applyButton} onPress={()=>apply(role)}><Text style={styles.applyText}>Candidati</Text></TouchableOpacity>:null}</View><Text style={styles.roleDescription}>{role.description}</Text><View style={styles.skills}>{role.requiredSkills.map((skill)=><View key={skill} style={styles.skill}><Text style={styles.skillText}>{skill}</Text></View>)}</View></View>)}</View></View></ScrollView></View>}
-function Section({title,text,styles}:{title:string;text:string;styles:ReturnType<typeof makeStyles>}){return <View style={styles.section}><Text style={styles.sectionTitle}>{title}</Text><Text style={styles.body}>{text}</Text></View>};function Info({icon,label,value,colors,styles}:{icon:keyof typeof Ionicons.glyphMap;label:string;value:string;colors:ColorPalette;styles:ReturnType<typeof makeStyles>}){return <View style={styles.infoCard}><Ionicons name={icon} size={20} color={colors.primary}/><Text style={styles.infoLabel}>{label}</Text><Text style={styles.infoValue}>{value}</Text></View>}
-const makeStyles=(c:ColorPalette,top:number,bottom:number)=>StyleSheet.create({container:{flex:1,backgroundColor:c.background},loading:{flex:1,alignItems:'center',justifyContent:'center',gap:12,backgroundColor:c.background},notFound:{color:c.textStrong,fontSize:16,fontWeight:'700'},link:{color:c.primary,fontWeight:'700'},header:{paddingTop:Math.max(top,24)+8,paddingHorizontal:16,paddingBottom:12,flexDirection:'row',alignItems:'center',justifyContent:'space-between',backgroundColor:c.cardBackground,borderBottomWidth:1,borderBottomColor:c.border},headerButton:{width:42,height:42,borderRadius:12,alignItems:'center',justifyContent:'center',backgroundColor:c.actionSurface},headerTitle:{fontSize:16,fontWeight:'800',color:c.textStrong},content:{padding:20,gap:22,paddingBottom:30+bottom},hero:{gap:9},topRow:{flexDirection:'row',justifyContent:'space-between'},categoryChip:{paddingHorizontal:10,paddingVertical:6,borderRadius:8,backgroundColor:c.primarySoft},categoryText:{color:c.primary,fontSize:12,fontWeight:'800'},statusChip:{paddingHorizontal:10,paddingVertical:6,borderRadius:999,backgroundColor:c.actionSurface},statusText:{color:c.textMuted,fontSize:11,fontWeight:'800'},title:{fontSize:28,lineHeight:34,fontWeight:'900',color:c.textStrong},creator:{fontSize:12,fontWeight:'700',color:c.primary},description:{fontSize:15,lineHeight:23,color:c.textMuted},ownerPanel:{gap:12,padding:16,borderRadius:16,borderWidth:1,borderColor:c.border,backgroundColor:c.cardBackground},ownerTitle:{fontSize:16,fontWeight:'900',color:c.textStrong},ownerActions:{flexDirection:'row',gap:10},secondaryButton:{flex:1,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:7,paddingVertical:12,borderRadius:11,backgroundColor:c.actionSurface},secondaryText:{fontSize:12,fontWeight:'800',color:c.primary},primaryButton:{alignItems:'center',paddingVertical:13,borderRadius:11,backgroundColor:c.primary},primaryText:{color:c.white,fontWeight:'900'},completedNote:{fontSize:12,lineHeight:18,color:c.textMuted},infoGrid:{flexDirection:'row',flexWrap:'wrap',gap:10},infoCard:{width:'48%',minHeight:104,borderRadius:14,backgroundColor:c.cardBackground,borderWidth:1,borderColor:c.border,padding:14,gap:5},infoLabel:{fontSize:11,fontWeight:'700',color:c.gray},infoValue:{fontSize:13,fontWeight:'800',lineHeight:18,color:c.textStrong},section:{gap:10},sectionTitle:{fontSize:19,fontWeight:'900',color:c.textStrong},sectionSubtitle:{fontSize:13,color:c.gray},body:{fontSize:15,lineHeight:23,color:c.textMuted},notice:{flexDirection:'row',gap:10,padding:14,borderRadius:14,borderWidth:1,borderColor:c.border,backgroundColor:c.cardBackground},noticeText:{flex:1,fontSize:13,lineHeight:19,color:c.textMuted},rolesList:{gap:12},roleCard:{padding:16,gap:12,borderRadius:16,borderWidth:1,borderColor:c.border,backgroundColor:c.cardBackground},roleTop:{flexDirection:'row',alignItems:'center',gap:12},flex:{flex:1},roleTitle:{fontSize:16,fontWeight:'900',color:c.textStrong},roleSeats:{fontSize:12,fontWeight:'600',color:c.gray},roleDescription:{fontSize:14,lineHeight:21,color:c.textMuted},applyButton:{paddingHorizontal:14,paddingVertical:10,borderRadius:10,backgroundColor:c.primary},applyText:{fontSize:13,fontWeight:'900',color:c.white},skills:{flexDirection:'row',flexWrap:'wrap',gap:8},skill:{paddingHorizontal:9,paddingVertical:6,borderRadius:8,backgroundColor:c.actionSurface},skillText:{fontSize:11,fontWeight:'700',color:c.textMuted}});
+type Props = NativeStackScreenProps<RootStackParamList, 'ProjectDetail'>;
+
+type RoleApplicationState = Record<
+  string,
+  'pending' | 'accepted' | 'rejected' | 'withdrawn' | undefined
+>;
+
+export default function ProjectDetailScreen({ navigation, route }: Props) {
+  const { colors } = useAppPreferences();
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(
+    () => makeStyles(colors, insets.top, insets.bottom),
+    [colors, insets.bottom, insets.top]
+  );
+
+  const [data, setData] = useState<ProjectDetailData | null>(null);
+  const [members, setMembers] = useState<ProjectMember[]>([]);
+  const [applicationStates, setApplicationStates] =
+    useState<RoleApplicationState>({});
+  const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const [detail, projectMembers, savedState] = await Promise.all([
+      getProjectDetail(route.params.projectId),
+      listProjectMembers(route.params.projectId),
+      isProjectSaved(route.params.projectId),
+    ]);
+
+    const nextApplicationStates: RoleApplicationState = {};
+    if (detail && detail.project.ownerId !== CURRENT_USER_ID) {
+      await Promise.all(
+        detail.roles.map(async (role) => {
+          const application = await getApplicationForUserRole(
+            CURRENT_USER_ID,
+            detail.project.id,
+            role.id
+          );
+          nextApplicationStates[role.id] = application?.status;
+        })
+      );
+    }
+
+    setData(detail);
+    setMembers(projectMembers);
+    setSaved(savedState);
+    setApplicationStates(nextApplicationStates);
+    setLoading(false);
+  }, [route.params.projectId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load])
+  );
+
+  if (loading) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (!data) {
+    return (
+      <View style={styles.loading}>
+        <Text style={styles.notFound}>Progetto non disponibile.</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Text style={styles.link}>Torna indietro</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const { project, roles } = data;
+  const owner = isProjectOwner(project);
+  const activeMembers = members.filter((member) => member.status === 'active');
+  const currentUserIsMember = members.some(
+    (member) =>
+      member.userId === CURRENT_USER_ID &&
+      (member.status === 'active' || member.status === 'completed')
+  );
+
+  const occupiedSeats = (roleId: string) =>
+    activeMembers.filter((member) => member.roleId === roleId).length;
+
+  const apply = (role: ProjectRole) => {
+    if (project.status !== 'recruiting') {
+      Alert.alert(
+        'Candidature chiuse',
+        'Questo progetto non è più in fase di recruiting.'
+      );
+      return;
+    }
+    if (occupiedSeats(role.id) >= role.seats) {
+      Alert.alert(
+        'Ruolo completo',
+        'Non ci sono più posti disponibili per questo ruolo.'
+      );
+      return;
+    }
+    navigation.navigate('ApplyToProject', {
+      projectId: project.id,
+      roleId: role.id,
+    });
+  };
+
+  const start = async () => {
+    if (activeMembers.length < 1) {
+      Alert.alert(
+        'Team non pronto',
+        'Accetta almeno una candidatura prima di avviare il progetto.'
+      );
+      return;
+    }
+
+    Alert.alert(
+      'Avviare il progetto?',
+      'Il recruiting verrà chiuso e le candidature ancora in attesa saranno rifiutate.',
+      [
+        { text: 'Annulla', style: 'cancel' },
+        {
+          text: 'Avvia',
+          onPress: async () => {
+            try {
+              await setProjectStatus(project.id, 'active');
+              await closePendingApplicationsForProject(project.id);
+              await load();
+            } catch (error) {
+              Alert.alert(
+                'Operazione non riuscita',
+                error instanceof Error ? error.message : 'Errore imprevisto.'
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const cancelProject = () => {
+    Alert.alert(
+      'Annullare il progetto?',
+      project.status === 'active'
+        ? 'Il progetto verrà chiuso e i membri attivi non riceveranno una Crevia Experience.'
+        : 'Il progetto verrà rimosso dal recruiting e le candidature in attesa saranno chiuse.',
+      [
+        { text: 'Indietro', style: 'cancel' },
+        {
+          text: 'Annulla progetto',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await setProjectStatus(project.id, 'cancelled');
+              await closePendingApplicationsForProject(project.id);
+              await closeActiveMembersForProject(project.id);
+              await load();
+            } catch (error) {
+              Alert.alert(
+                'Operazione non riuscita',
+                error instanceof Error ? error.message : 'Errore imprevisto.'
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const toggleSaved = async () => {
+    const next = await toggleSavedProject(project.id);
+    setSaved(next);
+  };
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.headerButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons
+            name="chevron-back"
+            size={24}
+            color={colors.textStrong}
+          />
+        </TouchableOpacity>
+
+        <Text style={styles.headerTitle}>Progetto</Text>
+
+        <TouchableOpacity
+          style={styles.headerButton}
+          onPress={() => void toggleSaved()}
+          accessibilityLabel={saved ? 'Rimuovi dai salvati' : 'Salva progetto'}
+        >
+          <Ionicons
+            name={saved ? 'bookmark' : 'bookmark-outline'}
+            size={20}
+            color={colors.primary}
+          />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.hero}>
+          <View style={styles.topRow}>
+            <View style={styles.categoryChip}>
+              <Text style={styles.categoryText}>{project.category}</Text>
+            </View>
+            <View style={styles.statusChip}>
+              <Text style={styles.statusText}>
+                {getProjectStatusLabel(project.status)}
+              </Text>
+            </View>
+          </View>
+
+          <Text style={styles.title}>{project.title}</Text>
+          <Text style={styles.creator}>
+            Creato da {getOwnerLabel(project)}
+          </Text>
+          <Text style={styles.description}>{project.description}</Text>
+        </View>
+
+        {owner ? (
+          <View style={styles.ownerPanel}>
+            <Text style={styles.ownerTitle}>Gestione progetto</Text>
+
+            <View style={styles.ownerActions}>
+              <TouchableOpacity
+                style={styles.secondaryButton}
+                onPress={() =>
+                  navigation.navigate('ProjectApplications', {
+                    projectId: project.id,
+                  })
+                }
+              >
+                <Ionicons
+                  name="document-text-outline"
+                  size={18}
+                  color={colors.primary}
+                />
+                <Text style={styles.secondaryText}>Candidature</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.secondaryButton}
+                onPress={() =>
+                  navigation.navigate('ProjectTeam', {
+                    projectId: project.id,
+                  })
+                }
+              >
+                <Ionicons
+                  name="people-outline"
+                  size={18}
+                  color={colors.primary}
+                />
+                <Text style={styles.secondaryText}>
+                  Team ({members.length})
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {project.status === 'recruiting' ? (
+              <TouchableOpacity
+                style={styles.primaryButton}
+                onPress={() => void start()}
+              >
+                <Text style={styles.primaryText}>Avvia progetto</Text>
+              </TouchableOpacity>
+            ) : null}
+
+            {project.status === 'active' ? (
+              <TouchableOpacity
+                style={styles.primaryButton}
+                onPress={() =>
+                  navigation.navigate('CompleteProject', {
+                    projectId: project.id,
+                  })
+                }
+              >
+                <Text style={styles.primaryText}>Completa progetto</Text>
+              </TouchableOpacity>
+            ) : null}
+
+            {project.status === 'completed' ? (
+              <Text style={styles.completedNote}>
+                Progetto completato. Le esperienze dei membri selezionati
+                attendono la conferma personale.
+              </Text>
+            ) : null}
+
+            {project.status === 'recruiting' || project.status === 'active' ? (
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={cancelProject}
+              >
+                <Text style={styles.cancelText}>Annulla progetto</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        ) : currentUserIsMember ? (
+          <TouchableOpacity
+            style={styles.memberTeamButton}
+            onPress={() =>
+              navigation.navigate('ProjectTeam', { projectId: project.id })
+            }
+          >
+            <Ionicons
+              name="people-outline"
+              size={18}
+              color={colors.primary}
+            />
+            <Text style={styles.secondaryText}>Apri il team del progetto</Text>
+          </TouchableOpacity>
+        ) : null}
+
+        <View style={styles.infoGrid}>
+          <Info
+            icon="location-outline"
+            label="Modalità"
+            value={getLocationLabel(project)}
+            colors={colors}
+            styles={styles}
+          />
+          <Info
+            icon="time-outline"
+            label="Durata"
+            value={project.expectedDuration ?? 'Da definire'}
+            colors={colors}
+            styles={styles}
+          />
+          <Info
+            icon="calendar-outline"
+            label="Impegno"
+            value={
+              project.weeklyCommitmentHours
+                ? `${project.weeklyCommitmentHours} h/settimana`
+                : 'Da definire'
+            }
+            colors={colors}
+            styles={styles}
+          />
+          <Info
+            icon="cash-outline"
+            label="Condizioni"
+            value={getCompensationLabel(project)}
+            colors={colors}
+            styles={styles}
+          />
+        </View>
+
+        <Section title="Obiettivo" text={project.goal} styles={styles} />
+        <Section
+          title="Deliverable"
+          text={project.deliverable ?? 'Non specificato'}
+          styles={styles}
+        />
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Condizioni economiche</Text>
+          <View style={styles.notice}>
+            <Ionicons
+              name="information-circle-outline"
+              size={20}
+              color={colors.primary}
+            />
+            <Text style={styles.noticeText}>
+              {project.compensationNotes ?? getCompensationLabel(project)}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Ruoli</Text>
+          <Text style={styles.sectionSubtitle}>
+            {project.status === 'recruiting'
+              ? 'Candidati a un ruolo specifico.'
+              : 'Il recruiting per questo progetto è chiuso.'}
+          </Text>
+
+          <View style={styles.rolesList}>
+            {roles.map((role) => {
+              const occupied = occupiedSeats(role.id);
+              const available = Math.max(role.seats - occupied, 0);
+              const applicationStatus = applicationStates[role.id];
+              const applicationLabel =
+                applicationStatus === 'pending'
+                  ? 'Candidatura in attesa'
+                  : applicationStatus === 'accepted'
+                    ? 'Candidatura accettata'
+                    : applicationStatus === 'rejected'
+                      ? 'Candidatura rifiutata'
+                      : applicationStatus === 'withdrawn'
+                        ? 'Candidatura ritirata'
+                        : null;
+
+              return (
+                <View key={role.id} style={styles.roleCard}>
+                  <View style={styles.roleTop}>
+                    <View style={styles.flex}>
+                      <Text style={styles.roleTitle}>{role.title}</Text>
+                      <Text style={styles.roleSeats}>
+                        {project.status === 'recruiting'
+                          ? `${available} di ${role.seats} ${role.seats === 1 ? 'posto disponibile' : 'posti disponibili'}`
+                          : `${occupied} membri nel ruolo`}
+                      </Text>
+                    </View>
+
+                    {!owner &&
+                    project.status === 'recruiting' &&
+                    !applicationStatus &&
+                    available > 0 ? (
+                      <TouchableOpacity
+                        style={styles.applyButton}
+                        onPress={() => apply(role)}
+                      >
+                        <Text style={styles.applyText}>Candidati</Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
+
+                  {applicationLabel ? (
+                    <View style={styles.applicationBadge}>
+                      <Text style={styles.applicationBadgeText}>
+                        {applicationLabel}
+                      </Text>
+                    </View>
+                  ) : null}
+
+                  <Text style={styles.roleDescription}>
+                    {role.description}
+                  </Text>
+
+                  <View style={styles.skills}>
+                    {role.requiredSkills.map((skill) => (
+                      <View key={skill} style={styles.skill}>
+                        <Text style={styles.skillText}>{skill}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+function Section({
+  title,
+  text,
+  styles,
+}: {
+  title: string;
+  text: string;
+  styles: ReturnType<typeof makeStyles>;
+}) {
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      <Text style={styles.body}>{text}</Text>
+    </View>
+  );
+}
+
+function Info({
+  icon,
+  label,
+  value,
+  colors,
+  styles,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string;
+  colors: ColorPalette;
+  styles: ReturnType<typeof makeStyles>;
+}) {
+  return (
+    <View style={styles.infoCard}>
+      <Ionicons name={icon} size={20} color={colors.primary} />
+      <Text style={styles.infoLabel}>{label}</Text>
+      <Text style={styles.infoValue}>{value}</Text>
+    </View>
+  );
+}
+
+const makeStyles = (c: ColorPalette, top: number, bottom: number) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
+    loading: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 12,
+      backgroundColor: c.background,
+    },
+    notFound: { color: c.textStrong, fontSize: 16, fontWeight: '700' },
+    link: { color: c.primary, fontWeight: '700' },
+    header: {
+      paddingTop: Math.max(top, 24) + 8,
+      paddingHorizontal: 16,
+      paddingBottom: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: c.cardBackground,
+      borderBottomWidth: 1,
+      borderBottomColor: c.border,
+    },
+    headerButton: {
+      width: 42,
+      height: 42,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: c.actionSurface,
+    },
+    headerTitle: { fontSize: 16, fontWeight: '800', color: c.textStrong },
+    content: { padding: 20, gap: 22, paddingBottom: 30 + bottom },
+    hero: { gap: 9 },
+    topRow: { flexDirection: 'row', justifyContent: 'space-between' },
+    categoryChip: {
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 8,
+      backgroundColor: c.primarySoft,
+    },
+    categoryText: { color: c.primary, fontSize: 12, fontWeight: '800' },
+    statusChip: {
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: c.actionSurface,
+    },
+    statusText: { color: c.textMuted, fontSize: 11, fontWeight: '800' },
+    title: {
+      fontSize: 28,
+      lineHeight: 34,
+      fontWeight: '900',
+      color: c.textStrong,
+    },
+    creator: { fontSize: 12, fontWeight: '700', color: c.primary },
+    description: { fontSize: 15, lineHeight: 23, color: c.textMuted },
+    ownerPanel: {
+      gap: 12,
+      padding: 16,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.cardBackground,
+    },
+    ownerTitle: { fontSize: 16, fontWeight: '900', color: c.textStrong },
+    ownerActions: { flexDirection: 'row', gap: 10 },
+    secondaryButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 7,
+      paddingVertical: 12,
+      borderRadius: 11,
+      backgroundColor: c.actionSurface,
+    },
+    memberTeamButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingVertical: 13,
+      borderRadius: 12,
+      backgroundColor: c.actionSurface,
+    },
+    secondaryText: { fontSize: 12, fontWeight: '800', color: c.primary },
+    primaryButton: {
+      alignItems: 'center',
+      paddingVertical: 13,
+      borderRadius: 11,
+      backgroundColor: c.primary,
+    },
+    primaryText: { color: c.white, fontWeight: '900' },
+    cancelButton: {
+      alignItems: 'center',
+      paddingVertical: 11,
+      borderRadius: 11,
+      borderWidth: 1,
+      borderColor: c.dangerBorder,
+      backgroundColor: c.dangerSoft,
+    },
+    cancelText: { color: c.error, fontSize: 12, fontWeight: '900' },
+    completedNote: { fontSize: 12, lineHeight: 18, color: c.textMuted },
+    infoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    infoCard: {
+      width: '48%',
+      minHeight: 104,
+      borderRadius: 14,
+      backgroundColor: c.cardBackground,
+      borderWidth: 1,
+      borderColor: c.border,
+      padding: 14,
+      gap: 5,
+    },
+    infoLabel: { fontSize: 11, fontWeight: '700', color: c.gray },
+    infoValue: {
+      fontSize: 13,
+      fontWeight: '800',
+      lineHeight: 18,
+      color: c.textStrong,
+    },
+    section: { gap: 10 },
+    sectionTitle: { fontSize: 19, fontWeight: '900', color: c.textStrong },
+    sectionSubtitle: { fontSize: 13, color: c.gray },
+    body: { fontSize: 15, lineHeight: 23, color: c.textMuted },
+    notice: {
+      flexDirection: 'row',
+      gap: 10,
+      padding: 14,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.cardBackground,
+    },
+    noticeText: { flex: 1, fontSize: 13, lineHeight: 19, color: c.textMuted },
+    rolesList: { gap: 12 },
+    roleCard: {
+      padding: 16,
+      gap: 12,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.cardBackground,
+    },
+    roleTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    flex: { flex: 1 },
+    roleTitle: { fontSize: 16, fontWeight: '900', color: c.textStrong },
+    roleSeats: { fontSize: 12, fontWeight: '600', color: c.gray },
+    roleDescription: { fontSize: 14, lineHeight: 21, color: c.textMuted },
+    applyButton: {
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 10,
+      backgroundColor: c.primary,
+    },
+    applyText: { fontSize: 13, fontWeight: '900', color: c.white },
+    applicationBadge: {
+      alignSelf: 'flex-start',
+      paddingHorizontal: 9,
+      paddingVertical: 6,
+      borderRadius: 8,
+      backgroundColor: c.primarySoft,
+    },
+    applicationBadgeText: {
+      fontSize: 11,
+      fontWeight: '800',
+      color: c.primary,
+    },
+    skills: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    skill: {
+      paddingHorizontal: 9,
+      paddingVertical: 6,
+      borderRadius: 8,
+      backgroundColor: c.actionSurface,
+    },
+    skillText: { fontSize: 11, fontWeight: '700', color: c.textMuted },
+  });
