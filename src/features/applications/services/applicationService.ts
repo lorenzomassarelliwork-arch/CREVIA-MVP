@@ -103,13 +103,23 @@ export async function createApplication(input: {
 export async function listApplicationsForProject(
   projectId: string
 ): Promise<ApplicationWithApplicant[]> {
-  return applications.filter((item) => item.projectId === projectId);
+  return applications
+    .filter((item) => item.projectId === projectId)
+    .map((item) => ({
+      ...item,
+      applicant: getProfileSnapshot(item.applicantId) ?? item.applicant,
+    }));
 }
 
 export async function listApplicationsForUser(
   userId: string
 ): Promise<ApplicationWithApplicant[]> {
-  return applications.filter((item) => item.applicantId === userId);
+  return applications
+    .filter((item) => item.applicantId === userId)
+    .map((item) => ({
+      ...item,
+      applicant: getProfileSnapshot(item.applicantId) ?? item.applicant,
+    }));
 }
 
 export async function getApplicationForUserRole(
