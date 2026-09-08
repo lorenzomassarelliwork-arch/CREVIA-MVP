@@ -232,6 +232,22 @@ export default function ProjectTeamScreen({ navigation, route }: Props) {
                       </Text>
                     ) : null}
 
+                    <TouchableOpacity
+                      style={styles.profileButton}
+                      onPress={() =>
+                        navigation.navigate('PublicProfile', {
+                          userId: member.userId,
+                        })
+                      }
+                    >
+                      <Ionicons
+                        name="person-outline"
+                        size={14}
+                        color={colors.primary}
+                      />
+                      <Text style={styles.profileText}>Apri profilo</Text>
+                    </TouchableOpacity>
+
                     {canConfirm ? (
                       <TouchableOpacity
                         style={styles.confirmButton}
@@ -368,6 +384,22 @@ const makeStyles = (c: ColorPalette, top: number, bottom: number) =>
     badgeText: {
       fontSize: 10,
       fontWeight: '800',
+      color: c.primary,
+    },
+    profileButton: {
+      alignSelf: 'flex-start',
+      marginTop: 8,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 11,
+      paddingVertical: 8,
+      borderRadius: 9,
+      backgroundColor: c.actionSurface,
+    },
+    profileText: {
+      fontSize: 11,
+      fontWeight: '900',
       color: c.primary,
     },
     confirmButton: {
