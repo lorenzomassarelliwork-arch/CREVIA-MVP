@@ -72,7 +72,7 @@ export default function PublicProfileScreen({ navigation, route }: Props) {
   const { profile, createdProjects, participatedProjects, experiences } =
     overview;
   const publicExperiences = experiences.filter(
-    ({ experience }) => experience.verificationStatus === 'verified'
+    ({ experience }) => experience.verificationStatus !== 'disputed'
   );
 
   return (
@@ -228,15 +228,26 @@ export default function PublicProfileScreen({ navigation, route }: Props) {
                       Esperienza verificata tramite Crevia
                     </Text>
                   </View>
-                ) : null}
+                ) : (
+                  <View style={styles.pendingRow}>
+                    <Ionicons
+                      name="time-outline"
+                      size={16}
+                      color={colors.gray}
+                    />
+                    <Text style={styles.pendingText}>
+                      Esperienza in attesa di conferma del partecipante
+                    </Text>
+                  </View>
+                )}
               </TouchableOpacity>
             ))
           ) : (
             <View style={styles.emptyCard}>
               <Ionicons name="ribbon-outline" size={28} color={colors.gray} />
-              <Text style={styles.emptyTitle}>Nessuna esperienza verificata</Text>
+              <Text style={styles.emptyTitle}>Nessuna esperienza ancora</Text>
               <Text style={styles.emptyText}>
-                Le esperienze completate appariranno qui.
+                Le esperienze completate appariranno qui, indicando chiaramente se sono in attesa o verificate.
               </Text>
             </View>
           )}
@@ -464,6 +475,8 @@ const makeStyles = (c: ColorPalette, top: number, bottom: number) =>
     dateText: { fontSize: 11, color: c.gray },
     verifiedRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     verifiedText: { fontSize: 11, fontWeight: '800', color: c.confirm },
+    pendingRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    pendingText: { fontSize: 11, fontWeight: '700', color: c.gray },
     projectCard: {
       flexDirection: 'row',
       alignItems: 'center',
