@@ -83,6 +83,10 @@ export default function ProfileScreen({ navigation }: Props) {
     try {
       await confirmExperience(experienceId, CURRENT_USER_ID);
       await load();
+      Alert.alert(
+        'Esperienza verificata',
+        'La tua partecipazione al progetto è stata confermata.'
+      );
     } catch (error) {
       Alert.alert(
         'Conferma non riuscita',
