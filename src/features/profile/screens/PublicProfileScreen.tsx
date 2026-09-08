@@ -71,6 +71,9 @@ export default function PublicProfileScreen({ navigation, route }: Props) {
 
   const { profile, createdProjects, participatedProjects, experiences } =
     overview;
+  const publicExperiences = experiences.filter(
+    ({ experience }) => experience.verificationStatus === 'verified'
+  );
 
   return (
     <View style={styles.container}>
@@ -155,8 +158,8 @@ export default function PublicProfileScreen({ navigation, route }: Props) {
             </View>
           </View>
 
-          {experiences.length > 0 ? (
-            experiences.map(({ experience, project }) => (
+          {publicExperiences.length > 0 ? (
+            publicExperiences.map(({ experience, project }) => (
               <TouchableOpacity
                 key={experience.id}
                 style={styles.experienceCard}
