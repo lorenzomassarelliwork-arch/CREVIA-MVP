@@ -4,7 +4,7 @@ import type {
   ProjectMember,
   UserProfile,
 } from '../../../domain/models';
-import { currentProfile_USER_ID } from '../../../core/session';
+import { CURRENT_USER_ID } from '../../../core/session';
 import {
   getProjectDetail,
   getProjectRole,
@@ -23,7 +23,7 @@ export type ProjectMemberWithProfile = ProjectMember & {
 };
 
 const giulia = getProfileSnapshot('builder-1');
-const currentProfile = getProfileSnapshot(currentProfile_USER_ID);
+const currentProfile = getProfileSnapshot(CURRENT_USER_ID);
 if (!giulia || !currentProfile) {
   throw new Error('Profili demo non disponibili.');
 }
