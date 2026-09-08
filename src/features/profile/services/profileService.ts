@@ -116,6 +116,15 @@ export async function updateCurrentProfile(
     throw new Error('Aggiungi almeno una competenza.');
   }
 
+  const avatarUrl = input.avatarUrl?.trim() || null;
+  if (
+    avatarUrl &&
+    !avatarUrl.toLowerCase().startsWith('https://') &&
+    !avatarUrl.toLowerCase().startsWith('http://')
+  ) {
+    throw new Error('L’URL dell’avatar deve iniziare con http:// o https://.');
+  }
+
   const updated: UserProfile = {
     ...current,
     firstName,
@@ -125,7 +134,7 @@ export async function updateCurrentProfile(
     bio,
     availability,
     skills,
-    avatarUrl: input.avatarUrl?.trim() || null,
+    avatarUrl,
     updatedAt: new Date().toISOString(),
   };
 
