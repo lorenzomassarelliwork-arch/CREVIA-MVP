@@ -205,12 +205,28 @@ export default function CreateProjectScreen({
       roles.length === 0 ||
       roles.some(
         (role) =>
-          role.title.trim().length < 2 || role.description.trim().length < 3
+          role.title.trim().length < 2 ||
+          role.description.trim().length < 3 ||
+          role.skills.split(',').map((skill) => skill.trim()).filter(Boolean)
+            .length === 0
       )
     ) {
       Alert.alert(
         'Ruoli incompleti',
-        'Aggiungi almeno un ruolo completo.'
+        'Ogni ruolo deve avere titolo, descrizione e almeno una competenza.'
+      );
+      return;
+    }
+
+    if (
+      roles.some(
+        (role) =>
+          !Number.isInteger(Number(role.seats)) || Number(role.seats) < 1
+      )
+    ) {
+      Alert.alert(
+        'Posti non validi',
+        'Il numero di posti per ogni ruolo deve essere un intero maggiore di zero.'
       );
       return;
     }
@@ -244,7 +260,7 @@ export default function CreateProjectScreen({
             .split(',')
             .map((skill) => skill.trim())
             .filter(Boolean),
-          seats: Math.max(1, Number(role.seats) || 1),
+          seats: Number(role.seats),
         })),
       });
 
