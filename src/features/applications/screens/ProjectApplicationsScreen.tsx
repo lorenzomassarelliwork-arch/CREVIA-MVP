@@ -13,6 +13,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import type { ProjectStatus } from '../../../domain/models';
 import type { RootStackParamList } from '../../../navigation/types';
 import type { ColorPalette } from '../../../theme/colors';
 import { useAppPreferences } from '../../../theme/AppPreferencesProvider';
@@ -32,6 +33,7 @@ export default function ProjectApplicationsScreen({ navigation, route }: Props) 
   const styles = useMemo(() => createStyles(colors, insets.top, insets.bottom), [colors, insets.bottom, insets.top]);
   const [applications, setApplications] = useState<ApplicationWithApplicant[]>([]);
   const [projectTitle, setProjectTitle] = useState('Progetto');
+  const [projectStatus, setProjectStatus] = useState<ProjectStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
@@ -43,6 +45,7 @@ export default function ProjectApplicationsScreen({ navigation, route }: Props) 
     ]);
     setApplications(items);
     setProjectTitle(project?.project.title ?? 'Progetto');
+    setProjectStatus(project?.project.status ?? null);
     setLoading(false);
   }, [route.params.projectId]);
 
@@ -107,6 +110,15 @@ export default function ProjectApplicationsScreen({ navigation, route }: Props) 
         <View style={styles.loading}><ActivityIndicator size="large" color={colors.primary} /></View>
       ) : (
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          {projectStatus && projectStatus !== 'recruiting' ? (
+            <View style={styles.closedBanner}>
+              <Ionicons name="lock-closed-outline" size={17} color={colors.gray} />
+              <Text style={styles.closedBannerText}>
+                Recruiting chiuso: le candidature sono consultabili ma non più modificabili.
+              </Text>
+            </View>
+          ) : null}
+
           {applications.length === 0 ? (
             <View style={styles.emptyCard}>
               <Ionicons name="people-outline" size={28} color={colors.gray} />
@@ -161,7 +173,7 @@ export default function ProjectApplicationsScreen({ navigation, route }: Props) 
                     </View>
                   ) : null}
 
-                  {application.status === 'pending' ? (
+                  {application.status === 'pending' && projectStatus === 'recruiting' ? (
                     <View style={styles.actions}>
                       <TouchableOpacity disabled={disabled} style={styles.rejectButton} onPress={() => reject(application)}>
                         <Text style={styles.rejectText}>Rifiuta</Text>
@@ -208,6 +220,8 @@ const createStyles = (colors: ColorPalette, topInset: number, bottomInset: numbe
   headerSubtitle: { color: colors.gray, fontSize: 11, marginTop: 2 },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   content: { padding: 20, gap: 14, paddingBottom: 30 + bottomInset },
+  closedBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, padding: 12, borderRadius: 12, backgroundColor: colors.actionSurface, borderWidth: 1, borderColor: colors.border },
+  closedBannerText: { flex: 1, color: colors.textMuted, fontSize: 12, lineHeight: 18, fontWeight: '700' },
   emptyCard: { minHeight: 220, borderRadius: 16, backgroundColor: colors.cardBackground, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 8 },
   emptyTitle: { color: colors.textStrong, fontSize: 17, fontWeight: '900' },
   emptyText: { color: colors.textMuted, fontSize: 13, lineHeight: 19, textAlign: 'center' },
