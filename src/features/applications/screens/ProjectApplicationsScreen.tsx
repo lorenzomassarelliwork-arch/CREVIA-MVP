@@ -118,7 +118,15 @@ export default function ProjectApplicationsScreen({ navigation, route }: Props) 
               const disabled = actionLoading === application.id;
               return (
                 <View key={application.id} style={styles.card}>
-                  <View style={styles.personRow}>
+                  <TouchableOpacity
+                    style={styles.personRow}
+                    activeOpacity={0.75}
+                    onPress={() =>
+                      navigation.navigate('PublicProfile', {
+                        userId: application.applicantId,
+                      })
+                    }
+                  >
                     <View style={styles.avatar}>
                       <Text style={styles.avatarText}>{application.applicant.firstName.charAt(0)}{application.applicant.lastName.charAt(0)}</Text>
                     </View>
@@ -128,7 +136,7 @@ export default function ProjectApplicationsScreen({ navigation, route }: Props) 
                       <Text style={styles.city}>{application.applicant.city ?? 'Località non indicata'}</Text>
                     </View>
                     <StatusBadge status={application.status} colors={colors} styles={styles} />
-                  </View>
+                  </TouchableOpacity>
 
                   <View style={styles.roleBox}>
                     <Text style={styles.roleLabel}>Candidatura per</Text>
