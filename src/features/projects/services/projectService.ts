@@ -1,6 +1,7 @@
 import type { CompensationType, Project, ProjectLocationMode, ProjectRole, ProjectStatus, ProjectType } from '../../../domain/models';
 import { CURRENT_USER_ID } from '../../../core/session';
 import { MVP_PROJECTS, MVP_PROJECT_ROLES } from '../data/mvpProjectData';
+import { getProfileDisplayName, getProfileSnapshot } from '../../profile/services/profileService';
 
 export type ProjectDetailData = { project: Project; roles: ProjectRole[] };
 export type NewProjectInput = {
@@ -21,7 +22,7 @@ export async function getProjectDetail(projectId: string): Promise<ProjectDetail
 export function getProjectRole(roleId: string): ProjectRole | null { return roles.find((item) => item.id === roleId) ?? null; }
 export function isProjectOwner(project: Project): boolean { return project.ownerId === CURRENT_USER_ID; }
 export function getOwnerLabel(project: Project): string {
-  if (project.ownerId === CURRENT_USER_ID) return 'Lorenzo Massarelli';
+  if (project.ownerId === CURRENT_USER_ID) { const profile=getProfileSnapshot(CURRENT_USER_ID); return profile?getProfileDisplayName(profile):'Creator Crevia'; }
   if (project.ownerId === 'user-founder-2') return 'Team UniConnect';
   if (project.ownerId === 'user-founder-3') return 'Team LocalUp';
   return 'Creator Crevia';
