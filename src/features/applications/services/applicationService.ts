@@ -22,11 +22,16 @@ export type ProjectMemberWithProfile = ProjectMember & {
   roleTitle: string;
 };
 
-const giulia = getProfileSnapshot('builder-1');
-const currentProfile = getProfileSnapshot(CURRENT_USER_ID);
-if (!giulia || !currentProfile) {
-  throw new Error('Profili demo non disponibili.');
+function requireProfile(userId: string): UserProfile {
+  const profile = getProfileSnapshot(userId);
+  if (!profile) {
+    throw new Error('Profilo non disponibile.');
+  }
+  return profile;
 }
+
+const giulia: UserProfile = requireProfile('builder-1');
+const currentProfile: UserProfile = requireProfile(CURRENT_USER_ID);
 
 let applications: ApplicationWithApplicant[] = [
   {
