@@ -4,12 +4,13 @@ import type {
   ProjectMember,
   UserProfile,
 } from '../../../domain/models';
-import { CURRENT_USER_ID } from '../../../core/session';
+import { currentProfile_USER_ID } from '../../../core/session';
 import {
   getProjectDetail,
   getProjectRole,
   isProjectOwner,
 } from '../../projects/services/projectService';
+import { getProfileSnapshot } from '../../profile/services/profileService';
 
 export type ApplicationWithApplicant = Application & {
   applicant: UserProfile;
@@ -21,44 +22,19 @@ export type ProjectMemberWithProfile = ProjectMember & {
   roleTitle: string;
 };
 
-const GIULIA: UserProfile = {
-  id: 'builder-1',
-  firstName: 'Giulia',
-  lastName: 'Bianchi',
-  city: 'Milano',
-  bio: 'UI/UX designer interessata a prodotti digitali ad impatto.',
-  headline: 'UI/UX Designer',
-  skills: ['Figma', 'UI Design', 'UX Research'],
-  availability: '5 ore/settimana',
-  createdAt: '2026-08-15T09:00:00.000Z',
-  updatedAt: '2026-08-15T09:00:00.000Z',
-};
-
-const CURRENT: UserProfile = {
-  id: CURRENT_USER_ID,
-  firstName: 'Lorenzo',
-  lastName: 'Massarelli',
-  city: 'Milano',
-  bio: null,
-  headline: 'Builder',
-  skills: ['TypeScript', 'React Native'],
-  availability: 'Da definire',
-  createdAt: '2026-09-01T09:00:00.000Z',
-  updatedAt: '2026-09-01T09:00:00.000Z',
-};
-
-const applicantProfiles: Record<string, UserProfile> = {
-  [GIULIA.id]: GIULIA,
-  [CURRENT.id]: CURRENT,
-};
+const giulia = getProfileSnapshot('builder-1');
+const currentProfile = getProfileSnapshot(currentProfile_USER_ID);
+if (!giulia || !currentProfile) {
+  throw new Error('Profili demo non disponibili.');
+}
 
 let applications: ApplicationWithApplicant[] = [
   {
     id: 'application-seed-1',
     projectId: 'project-1',
     roleId: 'role-2',
-    applicantId: GIULIA.id,
-    applicant: GIULIA,
+    applicantId: giulia.id,
+    applicant: giulia,
     roleTitle: 'UI Designer',
     motivation:
       'Vorrei contribuire alla definizione del prodotto e portare esperienza nella progettazione di flussi semplici e accessibili.',
@@ -102,7 +78,10 @@ export async function createApplication(input: {
   }
 
   const now = new Date().toISOString();
-  const applicant = applicantProfiles[input.applicantId] ?? CURRENT;
+  const applicant =
+    getProfileSnapshot(input.applicantId) ??
+    getProfileSnapshot(CURRENT_USER_ID) ??
+    currentProfile;
   const application: ApplicationWithApplicant = {
     id: `application-${Date.now()}`,
     projectId: input.projectId,
@@ -244,8 +223,8 @@ export async function listProjectMembersWithProfiles(
     .map((member) => {
       const role = getProjectRole(member.roleId);
       const profile =
-        applicantProfiles[member.userId] ?? {
-          ...CURRENT,
+        getProfileSnapshot(member.userId) ?? {
+          ...currentProfile,
           id: member.userId,
           firstName: 'Builder',
           lastName: 'Crevia',
