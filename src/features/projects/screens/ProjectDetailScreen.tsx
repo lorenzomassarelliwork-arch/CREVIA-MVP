@@ -118,6 +118,9 @@ export default function ProjectDetailScreen({ navigation, route }: Props) {
   const { project, roles } = data;
   const owner = isProjectOwner(project);
   const activeMembers = members.filter((member) => member.status === 'active');
+  const visibleTeamMembers = members.filter(
+    (member) => member.status === 'active' || member.status === 'completed'
+  );
   const currentUserIsMember = members.some(
     (member) =>
       member.userId === CURRENT_USER_ID &&
@@ -302,7 +305,7 @@ export default function ProjectDetailScreen({ navigation, route }: Props) {
                   color={colors.primary}
                 />
                 <Text style={styles.secondaryText}>
-                  Team ({members.length})
+                  Team ({visibleTeamMembers.length})
                 </Text>
               </TouchableOpacity>
             </View>
