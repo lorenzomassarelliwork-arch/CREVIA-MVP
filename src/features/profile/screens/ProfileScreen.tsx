@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   ScrollView,
   StyleSheet,
@@ -83,8 +84,9 @@ export default function ProfileScreen({ navigation }: Props) {
       await confirmExperience(experienceId, CURRENT_USER_ID);
       await load();
     } catch (error) {
-      console.warn(
-        error instanceof Error ? error.message : 'Conferma esperienza fallita.'
+      Alert.alert(
+        'Conferma non riuscita',
+        error instanceof Error ? error.message : 'Errore imprevisto.'
       );
     }
   };
