@@ -52,6 +52,7 @@ export async function registerUser(
     email: input.email.trim().toLowerCase(),
     password: input.password,
     options: {
+      emailRedirectTo: 'crevia://auth/callback',
       data: {
         first_name: input.firstName.trim(),
         last_name: input.lastName.trim(),
@@ -68,7 +69,8 @@ export async function registerUser(
 
 export async function requestPasswordReset(email: string): Promise<void> {
   const { error } = await supabase.auth.resetPasswordForEmail(
-    email.trim().toLowerCase()
+    email.trim().toLowerCase(),
+    { redirectTo: 'crevia://auth/callback' }
   );
 
   if (error) throw new Error(normalizeAuthError(error.message));
