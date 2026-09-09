@@ -1,19 +1,20 @@
 import type { UserProfile } from '../../../domain/models';
 import { CURRENT_USER_ID } from '../../../core/session';
+import { supabase } from '../../../lib/supabase';
 
 const now = '2026-09-01T09:00:00.000Z';
 
 let profiles: UserProfile[] = [
   {
     id: CURRENT_USER_ID,
-    firstName: 'Lorenzo',
-    lastName: 'Massarelli',
+    firstName: 'Builder',
+    lastName: 'Crevia',
     avatarUrl: null,
-    city: 'Milano',
-    bio: 'Builder interessato a prodotti digitali, tecnologia e progetti concreti.',
+    city: null,
+    bio: null,
     headline: 'Builder',
-    skills: ['TypeScript', 'React Native'],
-    availability: '5-8 ore/settimana',
+    skills: [],
+    availability: null,
     createdAt: now,
     updatedAt: now,
   },
@@ -69,12 +70,84 @@ export type UpdateProfileInput = {
   avatarUrl?: string | null;
 };
 
+type ProfileRow = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  avatar_url: string | null;
+  city: string | null;
+  bio: string | null;
+  headline: string | null;
+  skills: string[] | null;
+  availability: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+function mapProfileRow(row: ProfileRow, id: string = row.id): UserProfile {
+  return {
+    id,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    avatarUrl: row.avatar_url,
+    city: row.city,
+    bio: row.bio,
+    headline: row.headline,
+    skills: row.skills ?? [],
+    availability: row.availability,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+async function getAuthenticatedUserId(): Promise<string | null> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  return user?.id ?? null;
+}
+
+function cacheCurrentProfile(profile: UserProfile) {
+  profiles = profiles.map((item) =>
+    item.id === CURRENT_USER_ID ? { ...profile, id: CURRENT_USER_ID } : item
+  );
+}
+
 export function getProfileSnapshot(userId: string): UserProfile | null {
   return profiles.find((profile) => profile.id === userId) ?? null;
 }
 
 export async function getProfile(userId: string): Promise<UserProfile | null> {
-  return getProfileSnapshot(userId);
+  if (userId === CURRENT_USER_ID) {
+    const authUserId = await getAuthenticatedUserId();
+    if (!authUserId) return null;
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', authUserId)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    if (!data) return null;
+
+    const profile = mapProfileRow(data as ProfileRow, CURRENT_USER_ID);
+    cacheCurrentProfile(profile);
+    return profile;
+  }
+
+  const seeded = getProfileSnapshot(userId);
+  if (seeded) return seeded;
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return data ? mapProfileRow(data as ProfileRow) : null;
 }
 
 export async function listProfiles(): Promise<UserProfile[]> {
@@ -84,9 +157,6 @@ export async function listProfiles(): Promise<UserProfile[]> {
 export async function updateCurrentProfile(
   input: UpdateProfileInput
 ): Promise<UserProfile> {
-  const current = getProfileSnapshot(CURRENT_USER_ID);
-  if (!current) throw new Error('Profilo non trovato.');
-
   const firstName = input.firstName.trim();
   const lastName = input.lastName.trim();
   const headline = input.headline.trim();
@@ -125,23 +195,29 @@ export async function updateCurrentProfile(
     throw new Error('L’URL dell’avatar deve iniziare con http:// o https://.');
   }
 
-  const updated: UserProfile = {
-    ...current,
-    firstName,
-    lastName,
-    headline,
-    city,
-    bio,
-    availability,
-    skills,
-    avatarUrl,
-    updatedAt: new Date().toISOString(),
-  };
+  const authUserId = await getAuthenticatedUserId();
+  if (!authUserId) throw new Error('Sessione utente non disponibile.');
 
-  profiles = profiles.map((profile) =>
-    profile.id === CURRENT_USER_ID ? updated : profile
-  );
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({
+      first_name: firstName,
+      last_name: lastName,
+      headline,
+      city,
+      bio,
+      availability,
+      skills,
+      avatar_url: avatarUrl,
+    })
+    .eq('id', authUserId)
+    .select('*')
+    .single();
 
+  if (error) throw new Error(error.message);
+
+  const updated = mapProfileRow(data as ProfileRow, CURRENT_USER_ID);
+  cacheCurrentProfile(updated);
   return updated;
 }
 
