@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Dimensions, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Linking, View } from 'react-native';
 import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
@@ -24,6 +24,7 @@ import ProfileScreen from './src/features/profile/screens/ProfileScreen';
 import EditProfileScreen from './src/features/profile/screens/EditProfileScreen';
 import PublicProfileScreen from './src/features/profile/screens/PublicProfileScreen';
 import { supabase } from './src/lib/supabase';
+import { handleSupabaseAuthCallback } from './src/features/auth/services/authCallbackService';
 import {
   AppPreferencesProvider,
   useAppPreferences,
@@ -61,6 +62,21 @@ function AppNavigator() {
   useEffect(() => {
     let mounted = true;
 
+    const handleUrl = async (url: string | null) => {
+      if (!url) return;
+      try {
+        await handleSupabaseAuthCallback(url);
+      } catch (error) {
+        console.error('Supabase auth callback failed', error);
+      }
+    };
+
+    void Linking.getInitialURL().then(handleUrl);
+
+    const linkingSubscription = Linking.addEventListener('url', ({ url }) => {
+      void handleUrl(url);
+    });
+
     void supabase.auth.getSession().then(({ data }) => {
       if (!mounted) return;
       setSession(data.session);
@@ -76,6 +92,7 @@ function AppNavigator() {
 
     return () => {
       mounted = false;
+      linkingSubscription.remove();
       subscription.unsubscribe();
     };
   }, []);
