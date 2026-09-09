@@ -11,6 +11,7 @@
     "android": {
       "package": "com.crevia.mvp"
     },
-    "web": {}
+    "web": {},
+    "scheme": "crevia"
   }
 }
