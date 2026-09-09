@@ -23,6 +23,7 @@ import type { MainTabParamList, RootStackParamList } from '../../../navigation/t
 import type { ColorPalette } from '../../../theme/colors';
 import { useAppPreferences } from '../../../theme/AppPreferencesProvider';
 import { confirmExperience } from '../../experience/services/experienceService';
+import { logoutUser } from '../../auth/services/authService';
 import {
   getProfileOverview,
   type ProfileOverview,
@@ -79,6 +80,28 @@ export default function ProfileScreen({ navigation }: Props) {
   const { profile, createdProjects, participatedProjects, experiences } =
     overview;
 
+  const handleLogout = () => {
+    Alert.alert(
+      'Esci da Crevia',
+      'Vuoi terminare la sessione su questo dispositivo?',
+      [
+        { text: 'Annulla', style: 'cancel' },
+        {
+          text: 'Esci',
+          style: 'destructive',
+          onPress: () => {
+            void logoutUser().catch((error) => {
+              Alert.alert(
+                'Logout non riuscito',
+                error instanceof Error ? error.message : 'Errore imprevisto.'
+              );
+            });
+          },
+        },
+      ]
+    );
+  };
+
   const confirmPendingExperience = async (experienceId: string) => {
     try {
       await confirmExperience(experienceId, CURRENT_USER_ID);
@@ -103,13 +126,22 @@ export default function ProfileScreen({ navigation }: Props) {
           <Text style={styles.headerTitle}>Profilo</Text>
         </View>
 
-        <TouchableOpacity
-          style={styles.editButton}
-          onPress={() => navigation.navigate('EditProfile')}
-        >
-          <Ionicons name="create-outline" size={18} color={colors.primary} />
-          <Text style={styles.editText}>Modifica</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => navigation.navigate('EditProfile')}
+          >
+            <Ionicons name="create-outline" size={18} color={colors.primary} />
+            <Text style={styles.editText}>Modifica</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={handleLogout}
+            accessibilityLabel="Esci da Crevia"
+          >
+            <Ionicons name="log-out-outline" size={18} color={colors.error} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -477,6 +509,7 @@ const makeStyles = (c: ColorPalette, top: number, bottom: number) =>
       letterSpacing: 1,
     },
     headerTitle: { fontSize: 13, color: c.gray, fontWeight: '700' },
+    headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     editButton: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -487,6 +520,14 @@ const makeStyles = (c: ColorPalette, top: number, bottom: number) =>
       backgroundColor: c.actionSurface,
     },
     editText: { color: c.primary, fontSize: 12, fontWeight: '900' },
+    logoutButton: {
+      width: 38,
+      height: 38,
+      borderRadius: 11,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: c.dangerSoft,
+    },
     content: {
       padding: 20,
       gap: 22,
