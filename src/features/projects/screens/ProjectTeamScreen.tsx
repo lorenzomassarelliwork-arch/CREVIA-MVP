@@ -24,6 +24,10 @@ import {
   type ProjectMemberWithProfile,
 } from '../../applications/services/applicationService';
 import {
+  getOrCreateDirectChat,
+  getOrCreateProjectChat,
+} from '../../chat/services/chatService';
+import {
   confirmExperience,
   listExperiencesForProject,
 } from '../../experience/services/experienceService';
@@ -56,6 +60,8 @@ export default function ProjectTeamScreen({ navigation, route }: Props) {
   const [ownerProfile, setOwnerProfile] = useState<UserProfile | null>(null);
   const [ownerProfileId, setOwnerProfileId] = useState<string | null>(null);
   const [canManageTeam, setCanManageTeam] = useState(false);
+  const [canAccessProjectChat, setCanAccessProjectChat] = useState(false);
+  const [chatLoading, setChatLoading] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -100,6 +106,17 @@ export default function ProjectTeamScreen({ navigation, route }: Props) {
             detail.project.status === 'active')
       )
     );
+    setCanAccessProjectChat(
+      Boolean(
+        detail &&
+          (isProjectOwner(detail.project) ||
+            projectMembers.some(
+              (member) =>
+                member.userId === CURRENT_USER_ID &&
+                (member.status === 'active' || member.status === 'completed')
+            ))
+      )
+    );
     setExperiences(projectExperiences);
     setLoading(false);
   }, [route.params.projectId]);
@@ -109,6 +126,30 @@ export default function ProjectTeamScreen({ navigation, route }: Props) {
       void load();
     }, [load])
   );
+
+  const openProjectChat = async () => {
+    setChatLoading('project');
+    try {
+      const conversationId = await getOrCreateProjectChat(route.params.projectId);
+      navigation.navigate('ChatRoom', { conversationId });
+    } catch (error) {
+      Alert.alert('Chat non disponibile', error instanceof Error ? error.message : 'Errore imprevisto.');
+    } finally {
+      setChatLoading(null);
+    }
+  };
+
+  const openDirectChat = async (userId: string) => {
+    setChatLoading(userId);
+    try {
+      const conversationId = await getOrCreateDirectChat(userId, route.params.projectId);
+      navigation.navigate('ChatRoom', { conversationId });
+    } catch (error) {
+      Alert.alert('Chat non disponibile', error instanceof Error ? error.message : 'Errore imprevisto.');
+    } finally {
+      setChatLoading(null);
+    }
+  };
 
   const confirm = async (experience: VerifiedExperience) => {
     try {
@@ -174,7 +215,21 @@ export default function ProjectTeamScreen({ navigation, route }: Props) {
           <Text style={styles.headerSub}>{title}</Text>
         </View>
 
-        <View style={styles.spacer} />
+        {canAccessProjectChat ? (
+          <TouchableOpacity
+            style={styles.back}
+            onPress={() => void openProjectChat()}
+            disabled={chatLoading === 'project'}
+          >
+            {chatLoading === 'project' ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Ionicons name="chatbubbles-outline" size={20} color={colors.primary} />
+            )}
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.spacer} />
+        )}
       </View>
 
       {loading ? (
@@ -183,6 +238,19 @@ export default function ProjectTeamScreen({ navigation, route }: Props) {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
+          {canAccessProjectChat ? (
+            <TouchableOpacity style={styles.projectChatCard} onPress={() => void openProjectChat()}>
+              <View style={styles.projectChatIcon}>
+                <Ionicons name="people-outline" size={21} color={colors.primary} />
+              </View>
+              <View style={styles.flex}>
+                <Text style={styles.projectChatTitle}>Chat progetto</Text>
+                <Text style={styles.projectChatText}>Un unico spazio per coordinare tutto il team.</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.gray} />
+            </TouchableOpacity>
+          ) : null}
+
           <View style={styles.ownerCard}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>
@@ -212,6 +280,16 @@ export default function ProjectTeamScreen({ navigation, route }: Props) {
                     color={colors.primary}
                   />
                   <Text style={styles.profileText}>Apri profilo</Text>
+                </TouchableOpacity>
+              ) : null}
+              {ownerProfileId && ownerProfileId !== CURRENT_USER_ID ? (
+                <TouchableOpacity
+                  style={styles.chatButton}
+                  onPress={() => void openDirectChat(ownerProfileId)}
+                  disabled={chatLoading === ownerProfileId}
+                >
+                  <Ionicons name="chatbubble-outline" size={14} color={colors.primary} />
+                  <Text style={styles.profileText}>Messaggio privato</Text>
                 </TouchableOpacity>
               ) : null}
             </View>
@@ -244,6 +322,9 @@ export default function ProjectTeamScreen({ navigation, route }: Props) {
                 member.userId === CURRENT_USER_ID;
               const canRemove =
                 canManageTeam && member.status === 'active';
+              const canMessage =
+                member.userId !== CURRENT_USER_ID &&
+                (member.status === 'active' || member.status === 'completed');
 
               return (
                 <View key={member.id} style={styles.card}>
@@ -278,21 +359,34 @@ export default function ProjectTeamScreen({ navigation, route }: Props) {
                       </Text>
                     ) : null}
 
-                    <TouchableOpacity
-                      style={styles.profileButton}
-                      onPress={() =>
-                        navigation.navigate('PublicProfile', {
-                          userId: member.userId,
-                        })
-                      }
-                    >
-                      <Ionicons
-                        name="person-outline"
-                        size={14}
-                        color={colors.primary}
-                      />
-                      <Text style={styles.profileText}>Apri profilo</Text>
-                    </TouchableOpacity>
+                    <View style={styles.inlineActions}>
+                      <TouchableOpacity
+                        style={styles.profileButton}
+                        onPress={() =>
+                          navigation.navigate('PublicProfile', {
+                            userId: member.userId,
+                          })
+                        }
+                      >
+                        <Ionicons
+                          name="person-outline"
+                          size={14}
+                          color={colors.primary}
+                        />
+                        <Text style={styles.profileText}>Profilo</Text>
+                      </TouchableOpacity>
+
+                      {canMessage ? (
+                        <TouchableOpacity
+                          style={styles.chatButton}
+                          onPress={() => void openDirectChat(member.userId)}
+                          disabled={chatLoading === member.userId}
+                        >
+                          <Ionicons name="chatbubble-outline" size={14} color={colors.primary} />
+                          <Text style={styles.profileText}>Messaggio</Text>
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
 
                     {canConfirm ? (
                       <TouchableOpacity
@@ -370,6 +464,19 @@ const makeStyles = (c: ColorPalette, top: number, bottom: number) =>
       gap: 14,
       paddingBottom: 30 + bottom,
     },
+    projectChatCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      padding: 14,
+      borderRadius: 16,
+      backgroundColor: c.primarySoft,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    projectChatIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: c.cardBackground },
+    projectChatTitle: { fontSize: 14, fontWeight: '900', color: c.textStrong },
+    projectChatText: { fontSize: 11, color: c.textMuted, marginTop: 2 },
     sectionTitle: {
       fontSize: 19,
       fontWeight: '900',
@@ -432,6 +539,7 @@ const makeStyles = (c: ColorPalette, top: number, bottom: number) =>
       fontWeight: '800',
       color: c.primary,
     },
+    inlineActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     profileButton: {
       alignSelf: 'flex-start',
       marginTop: 8,
@@ -442,6 +550,17 @@ const makeStyles = (c: ColorPalette, top: number, bottom: number) =>
       paddingVertical: 8,
       borderRadius: 9,
       backgroundColor: c.actionSurface,
+    },
+    chatButton: {
+      alignSelf: 'flex-start',
+      marginTop: 8,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 11,
+      paddingVertical: 8,
+      borderRadius: 9,
+      backgroundColor: c.primarySoft,
     },
     profileText: {
       fontSize: 11,
