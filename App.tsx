@@ -20,6 +20,7 @@ import CompleteProjectScreen from './src/features/projects/screens/CompleteProje
 import ApplyToProjectScreen from './src/features/applications/screens/ApplyToProjectScreen';
 import ProjectApplicationsScreen from './src/features/applications/screens/ProjectApplicationsScreen';
 import ChatsScreen from './src/features/chat/screens/ChatsScreen';
+import ChatRoomScreen from './src/features/chat/screens/ChatRoomScreen';
 import NotificationsScreen from './src/features/notifications/screens/NotificationsScreen';
 import ProfileScreen from './src/features/profile/screens/ProfileScreen';
 import EditProfileScreen from './src/features/profile/screens/EditProfileScreen';
@@ -143,6 +144,7 @@ function AppNavigator() {
               options={{ gestureEnabled: false }}
             />
             <Stack.Screen name="Notifications" component={NotificationsScreen} />
+            <Stack.Screen name="ChatRoom" component={ChatRoomScreen} />
             <Stack.Screen name="ProjectDetail" component={ProjectDetailScreen} />
             <Stack.Screen
               name="ApplyToProject"
