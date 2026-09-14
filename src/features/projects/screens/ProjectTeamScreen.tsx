@@ -14,7 +14,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CURRENT_USER_ID } from '../../../core/session';
-import type { VerifiedExperience } from '../../../domain/models';
+import type { UserProfile, VerifiedExperience } from '../../../domain/models';
 import type { RootStackParamList } from '../../../navigation/types';
 import type { ColorPalette } from '../../../theme/colors';
 import { useAppPreferences } from '../../../theme/AppPreferencesProvider';
@@ -28,12 +28,18 @@ import {
   listExperiencesForProject,
 } from '../../experience/services/experienceService';
 import {
+  getProfile,
+  getProfileDisplayName,
+} from '../../profile/services/profileService';
+import {
   getOwnerLabel,
   getProjectDetail,
   isProjectOwner,
 } from '../services/projectService';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ProjectTeam'>;
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export default function ProjectTeamScreen({ navigation, route }: Props) {
   const { colors } = useAppPreferences();
@@ -47,6 +53,8 @@ export default function ProjectTeamScreen({ navigation, route }: Props) {
   const [experiences, setExperiences] = useState<VerifiedExperience[]>([]);
   const [title, setTitle] = useState('Team');
   const [ownerLabel, setOwnerLabel] = useState('Creator Crevia');
+  const [ownerProfile, setOwnerProfile] = useState<UserProfile | null>(null);
+  const [ownerProfileId, setOwnerProfileId] = useState<string | null>(null);
   const [canManageTeam, setCanManageTeam] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -58,10 +66,31 @@ export default function ProjectTeamScreen({ navigation, route }: Props) {
       listExperiencesForProject(route.params.projectId),
     ]);
 
+    let creatorProfile: UserProfile | null = null;
+    if (
+      detail &&
+      (detail.project.ownerId === CURRENT_USER_ID ||
+        UUID_PATTERN.test(detail.project.ownerId))
+    ) {
+      try {
+        creatorProfile = await getProfile(detail.project.ownerId);
+      } catch {
+        creatorProfile = null;
+      }
+    }
+
     setMembers(projectMembers);
     setTitle(detail?.project.title ?? 'Team');
+    setOwnerProfile(creatorProfile);
+    setOwnerProfileId(
+      creatorProfile && detail ? detail.project.ownerId : null
+    );
     setOwnerLabel(
-      detail ? getOwnerLabel(detail.project) : 'Creator Crevia'
+      creatorProfile
+        ? getProfileDisplayName(creatorProfile)
+        : detail
+          ? getOwnerLabel(detail.project)
+          : 'Creator Crevia'
     );
     setCanManageTeam(
       Boolean(
@@ -168,6 +197,23 @@ export default function ProjectTeamScreen({ navigation, route }: Props) {
             <View style={styles.flex}>
               <Text style={styles.name}>{ownerLabel}</Text>
               <Text style={styles.role}>Creator del progetto</Text>
+              {ownerProfileId ? (
+                <TouchableOpacity
+                  style={styles.profileButton}
+                  onPress={() =>
+                    navigation.navigate('PublicProfile', {
+                      userId: ownerProfileId,
+                    })
+                  }
+                >
+                  <Ionicons
+                    name="person-outline"
+                    size={14}
+                    color={colors.primary}
+                  />
+                  <Text style={styles.profileText}>Apri profilo</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
             <View style={styles.badge}>
               <Text style={styles.badgeText}>Founder</Text>
