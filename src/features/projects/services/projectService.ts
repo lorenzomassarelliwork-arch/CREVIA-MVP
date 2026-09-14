@@ -85,6 +85,82 @@ async function getAuthenticatedUserId(): Promise<string> {
   return user.id;
 }
 
+function validateNewProjectInput(input: NewProjectInput): void {
+  if (input.title.trim().length < 3) {
+    throw new Error('Il nome del progetto deve contenere almeno 3 caratteri.');
+  }
+  if (input.description.trim().length < 10) {
+    throw new Error('La descrizione del progetto deve contenere almeno 10 caratteri.');
+  }
+  if (input.goal.trim().length < 5) {
+    throw new Error('L’obiettivo del progetto deve contenere almeno 5 caratteri.');
+  }
+  if (input.deliverable.trim().length < 3) {
+    throw new Error('Il deliverable finale deve contenere almeno 3 caratteri.');
+  }
+  if (input.category.trim().length < 2) {
+    throw new Error('La categoria deve contenere almeno 2 caratteri.');
+  }
+  if (input.locationMode !== 'remote' && !input.city?.trim()) {
+    throw new Error('Indica la città per i progetti in presenza o ibridi.');
+  }
+  if (
+    input.weeklyCommitmentHours != null &&
+    (!Number.isInteger(input.weeklyCommitmentHours) ||
+      input.weeklyCommitmentHours < 1 ||
+      input.weeklyCommitmentHours > 168)
+  ) {
+    throw new Error('Le ore settimanali devono essere un numero intero da 1 a 168.');
+  }
+  if (input.roles.length < 1) {
+    throw new Error('Aggiungi almeno un ruolo al progetto.');
+  }
+
+  input.roles.forEach((role, index) => {
+    const roleNumber = index + 1;
+    if (role.title.trim().length < 2) {
+      throw new Error(`Il titolo del ruolo ${roleNumber} deve contenere almeno 2 caratteri.`);
+    }
+    if (role.description.trim().length < 5) {
+      throw new Error(`La descrizione del ruolo ${roleNumber} deve contenere almeno 5 caratteri.`);
+    }
+    if (role.requiredSkills.map((skill) => skill.trim()).filter(Boolean).length < 1) {
+      throw new Error(`Aggiungi almeno una competenza al ruolo ${roleNumber}.`);
+    }
+    if (!Number.isInteger(role.seats) || role.seats < 1 || role.seats > 50) {
+      throw new Error(`I posti del ruolo ${roleNumber} devono essere un numero intero da 1 a 50.`);
+    }
+  });
+}
+
+function normalizeProjectError(message: string): string {
+  if (message.includes('projects_description_check')) {
+    return 'La descrizione del progetto deve contenere almeno 10 caratteri.';
+  }
+  if (message.includes('projects_title_check')) {
+    return 'Il nome del progetto deve contenere almeno 3 caratteri.';
+  }
+  if (message.includes('projects_goal_check')) {
+    return 'L’obiettivo del progetto deve contenere almeno 5 caratteri.';
+  }
+  if (message.includes('projects_category_check')) {
+    return 'La categoria deve contenere almeno 2 caratteri.';
+  }
+  if (message.includes('weekly_commitment_hours')) {
+    return 'Le ore settimanali devono essere comprese tra 1 e 168.';
+  }
+  if (message.includes('project_roles_title_check')) {
+    return 'Il titolo di ogni ruolo deve contenere almeno 2 caratteri.';
+  }
+  if (message.includes('project_roles_description_check')) {
+    return 'La descrizione di ogni ruolo deve contenere almeno 5 caratteri.';
+  }
+  if (message.includes('project_roles_seats_check')) {
+    return 'I posti disponibili per ogni ruolo devono essere compresi tra 1 e 50.';
+  }
+  return 'Non è stato possibile pubblicare il progetto. Controlla i dati inseriti e riprova.';
+}
+
 function mapProjectRow(row: ProjectRow, authUserId: string): Project {
   return {
     id: row.id,
@@ -210,6 +286,7 @@ export function getOwnerLabel(project: Project): string {
 }
 
 export async function createProject(input: NewProjectInput): Promise<Project> {
+  validateNewProjectInput(input);
   await getAuthenticatedUserId();
 
   const payload = {
@@ -231,7 +308,7 @@ export async function createProject(input: NewProjectInput): Promise<Project> {
       required_skills: role.requiredSkills
         .map((skill) => skill.trim())
         .filter(Boolean),
-      seats: Math.max(1, role.seats),
+      seats: role.seats,
     })),
   };
 
@@ -239,7 +316,7 @@ export async function createProject(input: NewProjectInput): Promise<Project> {
     payload,
   });
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(normalizeProjectError(error.message));
   if (!data || typeof data !== 'string') {
     throw new Error('Creazione progetto non riuscita.');
   }
