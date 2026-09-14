@@ -51,6 +51,15 @@ function mapNotification(row: NotificationRow): AppNotification {
   };
 }
 
+async function getAuthenticatedUserId(): Promise<string> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error('Sessione utente non disponibile.');
+  return user.id;
+}
+
 export async function listNotifications(limit = 100): Promise<AppNotification[]> {
   const { data, error } = await supabase
     .from('notifications')
@@ -91,4 +100,27 @@ export async function markAllNotificationsRead(): Promise<void> {
     .is('read_at', null);
 
   if (error) throw new Error(error.message);
+}
+
+export async function subscribeNotificationChanges(
+  onChange: () => void
+): Promise<() => void> {
+  const userId = await getAuthenticatedUserId();
+  const channel = supabase
+    .channel(`notifications:${userId}:${Math.random().toString(36).slice(2)}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${userId}`,
+      },
+      () => onChange()
+    )
+    .subscribe();
+
+  return () => {
+    void supabase.removeChannel(channel);
+  };
 }
