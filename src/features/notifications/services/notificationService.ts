@@ -8,7 +8,8 @@ export type NotificationType =
   | 'project_cancelled'
   | 'experience_pending'
   | 'experience_verified'
-  | 'member_removed';
+  | 'member_removed'
+  | 'message_received';
 
 export type AppNotification = {
   id: string;
@@ -17,6 +18,7 @@ export type AppNotification = {
   projectId: string | null;
   applicationId: string | null;
   experienceId: string | null;
+  conversationId: string | null;
   title: string;
   body: string;
   readAt: string | null;
@@ -30,6 +32,7 @@ type NotificationRow = {
   project_id: string | null;
   application_id: string | null;
   experience_id: string | null;
+  conversation_id: string | null;
   title: string;
   body: string;
   read_at: string | null;
@@ -44,6 +47,7 @@ function mapNotification(row: NotificationRow): AppNotification {
     projectId: row.project_id,
     applicationId: row.application_id,
     experienceId: row.experience_id,
+    conversationId: row.conversation_id,
     title: row.title,
     body: row.body,
     readAt: row.read_at,
