@@ -13,6 +13,7 @@ export type RootStackParamList = {
   Register: undefined;
   ForgotPassword: undefined;
   Main: NavigatorScreenParams<MainTabParamList> | undefined;
+  Notifications: undefined;
   ProjectDetail: { projectId: string };
   ApplyToProject: { projectId: string; roleId: string };
   ProjectApplications: { projectId: string };
