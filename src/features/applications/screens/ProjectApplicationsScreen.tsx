@@ -23,6 +23,7 @@ import {
   rejectApplication,
   type ApplicationWithApplicant,
 } from '../services/applicationService';
+import { getOrCreateDirectChat } from '../../chat/services/chatService';
 import { getProjectDetail } from '../../projects/services/projectService';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ProjectApplications'>;
@@ -54,6 +55,24 @@ export default function ProjectApplicationsScreen({ navigation, route }: Props) 
       void loadData();
     }, [loadData])
   );
+
+  const openChat = async (application: ApplicationWithApplicant) => {
+    setActionLoading(`chat-${application.id}`);
+    try {
+      const conversationId = await getOrCreateDirectChat(
+        application.applicantId,
+        route.params.projectId
+      );
+      navigation.navigate('ChatRoom', { conversationId });
+    } catch (error) {
+      Alert.alert(
+        'Chat non disponibile',
+        error instanceof Error ? error.message : 'Errore imprevisto.'
+      );
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   const accept = async (application: ApplicationWithApplicant) => {
     setActionLoading(application.id);
@@ -128,6 +147,7 @@ export default function ProjectApplicationsScreen({ navigation, route }: Props) 
           ) : (
             applications.map((application) => {
               const disabled = actionLoading === application.id;
+              const chatLoading = actionLoading === `chat-${application.id}`;
               return (
                 <View key={application.id} style={styles.card}>
                   <TouchableOpacity
@@ -172,6 +192,19 @@ export default function ProjectApplicationsScreen({ navigation, route }: Props) 
                       <Text numberOfLines={1} style={styles.portfolioText}>{application.portfolioUrl}</Text>
                     </View>
                   ) : null}
+
+                  <TouchableOpacity
+                    disabled={chatLoading}
+                    style={styles.messageButton}
+                    onPress={() => void openChat(application)}
+                  >
+                    {chatLoading ? (
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    ) : (
+                      <Ionicons name="chatbubble-outline" size={16} color={colors.primary} />
+                    )}
+                    <Text style={styles.messageText}>Scrivi al candidato</Text>
+                  </TouchableOpacity>
 
                   {application.status === 'pending' && projectStatus === 'recruiting' ? (
                     <View style={styles.actions}>
@@ -246,6 +279,8 @@ const createStyles = (colors: ColorPalette, topInset: number, bottomInset: numbe
   skillText: { color: colors.textMuted, fontSize: 11, fontWeight: '700' },
   portfolioRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   portfolioText: { flex: 1, color: colors.primary, fontSize: 12, fontWeight: '600' },
+  messageButton: { minHeight: 42, borderRadius: 11, backgroundColor: colors.primarySoft, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 12 },
+  messageText: { color: colors.primary, fontSize: 12, fontWeight: '900' },
   actions: { flexDirection: 'row', gap: 10 },
   rejectButton: { flex: 1, borderRadius: 11, borderWidth: 1, borderColor: colors.dangerBorder, backgroundColor: colors.dangerSoft, paddingVertical: 12, alignItems: 'center' },
   rejectText: { color: colors.error, fontSize: 13, fontWeight: '900' },
