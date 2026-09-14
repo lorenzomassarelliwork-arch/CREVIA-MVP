@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -20,6 +20,7 @@ import {
   listNotifications,
   markAllNotificationsRead,
   markNotificationRead,
+  subscribeNotificationChanges,
   type AppNotification,
   type NotificationType,
 } from '../services/notificationService';
@@ -110,6 +111,28 @@ export default function NotificationsScreen({ navigation }: Props) {
       };
     }, [load])
   );
+
+  useEffect(() => {
+    let active = true;
+    let unsubscribe: (() => void) | undefined;
+
+    void subscribeNotificationChanges(() => {
+      void load();
+    })
+      .then((cleanup) => {
+        if (!active) {
+          cleanup();
+          return;
+        }
+        unsubscribe = cleanup;
+      })
+      .catch(() => undefined);
+
+    return () => {
+      active = false;
+      unsubscribe?.();
+    };
+  }, [load]);
 
   const refresh = async () => {
     setRefreshing(true);
