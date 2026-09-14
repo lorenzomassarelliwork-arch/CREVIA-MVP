@@ -79,6 +79,7 @@ async function getAuthUserId(): Promise<string> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
   if (!user) throw new Error('Sessione utente non disponibile.');
   return user.id;
 }
@@ -126,11 +127,13 @@ async function buildApplicationWithApplicant(
     (await getProfile(application.applicantId)) ??
     getProfileSnapshot(application.applicantId) ??
     { ...currentFallback, id: application.applicantId };
+
   const detail = await getProjectDetail(application.projectId);
   const roleTitle =
     detail?.roles.find((role) => role.id === application.roleId)?.title ??
     getProjectRole(application.roleId)?.title ??
     'Ruolo';
+
   return { ...application, applicant, roleTitle };
 }
 
@@ -146,6 +149,9 @@ function normalizeDbError(message: string): string {
   }
   if (message.includes('Project is not recruiting')) {
     return 'Il progetto non è più in recruiting.';
+  }
+  if (message.includes('Member is not active')) {
+    return 'Questo partecipante non è più attivo nel progetto.';
   }
   return message;
 }
@@ -167,7 +173,9 @@ export async function createApplication(input: {
   }
 
   const role = detail.roles.find((item) => item.id === input.roleId);
-  if (!role) throw new Error('Il ruolo selezionato non appartiene a questo progetto.');
+  if (!role) {
+    throw new Error('Il ruolo selezionato non appartiene a questo progetto.');
+  }
 
   if (isDemoProject(input.projectId)) {
     const existing = demoApplications.find(
@@ -177,11 +185,15 @@ export async function createApplication(input: {
         item.applicantId === input.applicantId &&
         (item.status === 'pending' || item.status === 'accepted')
     );
-    if (existing) throw new Error('Hai già una candidatura attiva per questo ruolo.');
+    if (existing) {
+      throw new Error('Hai già una candidatura attiva per questo ruolo.');
+    }
 
     const now = new Date().toISOString();
     const applicant =
-      getProfileSnapshot(input.applicantId) ?? getProfileSnapshot(CURRENT_USER_ID) ?? currentFallback;
+      getProfileSnapshot(input.applicantId) ??
+      getProfileSnapshot(CURRENT_USER_ID) ??
+      currentFallback;
     const application: ApplicationWithApplicant = {
       id: `application-${Date.now()}`,
       projectId: input.projectId,
@@ -195,6 +207,7 @@ export async function createApplication(input: {
       createdAt: now,
       updatedAt: now,
     };
+
     demoApplications = [application, ...demoApplications];
     return application;
   }
@@ -214,6 +227,7 @@ export async function createApplication(input: {
     .single();
 
   if (error) throw new Error(normalizeDbError(error.message));
+
   const authUserId = await getAuthUserId();
   return buildApplicationWithApplicant(data as ApplicationRow, authUserId);
 }
@@ -233,6 +247,7 @@ export async function listApplicationsForProject(
     .order('created_at', { ascending: false });
 
   if (error) throw new Error(error.message);
+
   return Promise.all(
     ((data ?? []) as ApplicationRow[]).map((row) =>
       buildApplicationWithApplicant(row, authUserId)
@@ -252,6 +267,7 @@ export async function listApplicationsForUser(
     .order('created_at', { ascending: false });
 
   if (error) throw new Error(error.message);
+
   return Promise.all(
     ((data ?? []) as ApplicationRow[]).map((row) =>
       buildApplicationWithApplicant(row, authUserId)
@@ -288,6 +304,7 @@ export async function getApplicationForUserRole(
     .maybeSingle();
 
   if (error) throw new Error(error.message);
+
   return data
     ? buildApplicationWithApplicant(data as ApplicationRow, authUserId)
     : null;
@@ -305,17 +322,25 @@ export async function acceptApplication(
     if (detail.project.status !== 'recruiting') {
       throw new Error('Il progetto non è più in recruiting.');
     }
+
     const role = detail.roles.find((item) => item.id === demo.roleId);
     if (!role) throw new Error('Ruolo non disponibile.');
+
     const occupied = demoMembers.filter(
       (item) => item.roleId === role.id && item.status === 'active'
     ).length;
-    if (occupied >= role.seats) throw new Error('Non ci sono più posti disponibili per questo ruolo.');
-    if (demo.status !== 'pending') throw new Error('Questa candidatura è già stata gestita.');
+    if (occupied >= role.seats) {
+      throw new Error('Non ci sono più posti disponibili per questo ruolo.');
+    }
+    if (demo.status !== 'pending') {
+      throw new Error('Questa candidatura è già stata gestita.');
+    }
 
     const now = new Date().toISOString();
     demoApplications = demoApplications.map((item) =>
-      item.id === applicationId ? { ...item, status: 'accepted', updatedAt: now } : item
+      item.id === applicationId
+        ? { ...item, status: 'accepted', updatedAt: now }
+        : item
     );
     const member: ProjectMember = {
       id: `member-${applicationId}`,
@@ -325,38 +350,65 @@ export async function acceptApplication(
       status: 'active',
       joinedAt: now,
     };
-    demoMembers = [member, ...demoMembers.filter((item) => item.id !== member.id)];
+
+    demoMembers = [
+      member,
+      ...demoMembers.filter((item) => item.id !== member.id),
+    ];
     return member;
   }
 
-  const { data, error } = await supabase.rpc('accept_application', {
-    target_application_id: applicationId,
-  });
-  if (error) throw new Error(normalizeDbError(error.message));
+  const { error: updateError } = await supabase
+    .from('applications')
+    .update({ status: 'accepted' })
+    .eq('id', applicationId)
+    .eq('status', 'pending');
 
-  const row = (Array.isArray(data) ? data[0] : data) as MemberRow | null;
-  if (!row) throw new Error('Partecipante non creato.');
-  return mapMember(row, await getAuthUserId());
+  if (updateError) {
+    throw new Error(normalizeDbError(updateError.message));
+  }
+
+  const { data, error } = await supabase
+    .from('project_members')
+    .select('*')
+    .eq('application_id', applicationId)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  if (!data) {
+    throw new Error('La candidatura non è più disponibile o è già stata gestita.');
+  }
+
+  return mapMember(data as MemberRow, await getAuthUserId());
 }
 
 export async function rejectApplication(applicationId: string): Promise<void> {
   const demo = demoApplications.find((item) => item.id === applicationId);
   if (demo) {
-    if (demo.status !== 'pending') throw new Error('Questa candidatura è già stata gestita.');
+    if (demo.status !== 'pending') {
+      throw new Error('Questa candidatura è già stata gestita.');
+    }
+
     const detail = await getProjectDetail(demo.projectId);
     if (!detail || !isProjectOwner(detail.project)) {
       throw new Error('Solo il creator può gestire le candidature.');
     }
+
     const now = new Date().toISOString();
     demoApplications = demoApplications.map((item) =>
-      item.id === applicationId ? { ...item, status: 'rejected', updatedAt: now } : item
+      item.id === applicationId
+        ? { ...item, status: 'rejected', updatedAt: now }
+        : item
     );
     return;
   }
 
-  const { error } = await supabase.rpc('reject_application', {
-    target_application_id: applicationId,
-  });
+  const { error } = await supabase
+    .from('applications')
+    .update({ status: 'rejected' })
+    .eq('id', applicationId)
+    .eq('status', 'pending');
+
   if (error) throw new Error(normalizeDbError(error.message));
 }
 
@@ -373,10 +425,13 @@ export async function closePendingApplicationsForProject(
     return;
   }
 
-  const { error } = await supabase.rpc('close_pending_applications', {
-    target_project_id: projectId,
-  });
-  if (error) throw new Error(error.message);
+  const { error } = await supabase
+    .from('applications')
+    .update({ status: 'rejected' })
+    .eq('project_id', projectId)
+    .eq('status', 'pending');
+
+  if (error) throw new Error(normalizeDbError(error.message));
 }
 
 export async function listProjectMembers(
@@ -394,7 +449,10 @@ export async function listProjectMembers(
     .order('joined_at', { ascending: true });
 
   if (error) throw new Error(error.message);
-  return ((data ?? []) as MemberRow[]).map((row) => mapMember(row, authUserId));
+
+  return ((data ?? []) as MemberRow[]).map((row) =>
+    mapMember(row, authUserId)
+  );
 }
 
 export async function listProjectMembersWithProfiles(
@@ -408,7 +466,13 @@ export async function listProjectMembersWithProfiles(
       const profile =
         (await getProfile(member.userId)) ??
         getProfileSnapshot(member.userId) ??
-        { ...currentFallback, id: member.userId, firstName: 'Builder', lastName: 'Crevia' };
+        {
+          ...currentFallback,
+          id: member.userId,
+          firstName: 'Builder',
+          lastName: 'Crevia',
+        };
+
       return {
         ...member,
         profile,
@@ -459,41 +523,93 @@ export async function finalizeProjectMembers(
           : { ...item, status: 'left' }
         : item
     );
+
     return demoMembers.filter(
       (item) => item.projectId === projectId && item.status === 'completed'
     );
   }
 
   const authUserId = await getAuthUserId();
-  const resolvedIds = await Promise.all(completedUserIds.map(resolveUserId));
-  const { data, error } = await supabase.rpc('finalize_project_members', {
-    target_project_id: projectId,
-    completed_user_ids: resolvedIds,
-  });
-  if (error) throw new Error(error.message);
-  return ((data ?? []) as MemberRow[]).map((row) => mapMember(row, authUserId));
+  const resolvedCompletedIds = await Promise.all(
+    completedUserIds.map((userId) => resolveUserId(userId))
+  );
+
+  const { data: activeRows, error: activeError } = await supabase
+    .from('project_members')
+    .select('*')
+    .eq('project_id', projectId)
+    .eq('status', 'active');
+
+  if (activeError) throw new Error(activeError.message);
+
+  const active = (activeRows ?? []) as MemberRow[];
+  const completedSet = new Set(resolvedCompletedIds);
+  const completedIds = active
+    .filter((row) => completedSet.has(row.user_id))
+    .map((row) => row.id);
+  const leftIds = active
+    .filter((row) => !completedSet.has(row.user_id))
+    .map((row) => row.id);
+
+  let completedRows: MemberRow[] = [];
+  const completedAt = new Date().toISOString();
+
+  if (completedIds.length > 0) {
+    const { data, error } = await supabase
+      .from('project_members')
+      .update({ status: 'completed', completed_at: completedAt })
+      .in('id', completedIds)
+      .select('*');
+
+    if (error) throw new Error(normalizeDbError(error.message));
+    completedRows = (data ?? []) as MemberRow[];
+  }
+
+  if (leftIds.length > 0) {
+    const { error } = await supabase
+      .from('project_members')
+      .update({ status: 'left', completed_at: null })
+      .in('id', leftIds);
+
+    if (error) throw new Error(normalizeDbError(error.message));
+  }
+
+  return completedRows.map((row) => mapMember(row, authUserId));
 }
 
-export async function removeProjectMember(memberId: string): Promise<ProjectMember> {
+export async function removeProjectMember(
+  memberId: string
+): Promise<ProjectMember> {
   const demo = demoMembers.find((item) => item.id === memberId);
   if (demo) {
-    if (demo.status !== 'active') throw new Error('Questo partecipante non è più attivo nel progetto.');
+    if (demo.status !== 'active') {
+      throw new Error('Questo partecipante non è più attivo nel progetto.');
+    }
+
     const detail = await getProjectDetail(demo.projectId);
     if (!detail || !isProjectOwner(detail.project)) {
       throw new Error('Solo il creator può rimuovere un partecipante.');
     }
+
     const updated: ProjectMember = { ...demo, status: 'removed' };
-    demoMembers = demoMembers.map((item) => (item.id === memberId ? updated : item));
+    demoMembers = demoMembers.map((item) =>
+      item.id === memberId ? updated : item
+    );
     return updated;
   }
 
-  const { data, error } = await supabase.rpc('remove_project_member', {
-    target_member_id: memberId,
-  });
-  if (error) throw new Error(error.message);
-  const row = (Array.isArray(data) ? data[0] : data) as MemberRow | null;
-  if (!row) throw new Error('Partecipante non trovato.');
-  return mapMember(row, await getAuthUserId());
+  const { data, error } = await supabase
+    .from('project_members')
+    .update({ status: 'removed', completed_at: null })
+    .eq('id', memberId)
+    .eq('status', 'active')
+    .select('*')
+    .maybeSingle();
+
+  if (error) throw new Error(normalizeDbError(error.message));
+  if (!data) throw new Error('Partecipante non trovato o non più attivo.');
+
+  return mapMember(data as MemberRow, await getAuthUserId());
 }
 
 export async function closeActiveMembersForProject(
@@ -508,10 +624,13 @@ export async function closeActiveMembersForProject(
     return;
   }
 
-  const { error } = await supabase.rpc('close_active_members', {
-    target_project_id: projectId,
-  });
-  if (error) throw new Error(error.message);
+  const { error } = await supabase
+    .from('project_members')
+    .update({ status: 'removed', completed_at: null })
+    .eq('project_id', projectId)
+    .eq('status', 'active');
+
+  if (error) throw new Error(normalizeDbError(error.message));
 }
 
 export async function getOccupiedSeats(roleId: string): Promise<number> {
