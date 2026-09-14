@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Image,
   RefreshControl,
@@ -25,7 +25,10 @@ import type { Project, ProjectRole } from '../../../domain/models';
 import type { ColorPalette } from '../../../theme/colors';
 import { useAppPreferences } from '../../../theme/AppPreferencesProvider';
 import { listProjectMembers } from '../../applications/services/applicationService';
-import { getUnreadNotificationCount } from '../../notifications/services/notificationService';
+import {
+  getUnreadNotificationCount,
+  subscribeNotificationChanges,
+} from '../../notifications/services/notificationService';
 import { CURRENT_USER_ID } from '../../../core/session';
 import { getProfile } from '../../profile/services/profileService';
 import { getProjectDetail, listProjects } from '../services/projectService';
@@ -141,6 +144,32 @@ export default function HomeScreen({ navigation }: Props) {
       void load();
     }, [load])
   );
+
+  useEffect(() => {
+    let active = true;
+    let unsubscribe: (() => void) | undefined;
+
+    void subscribeNotificationChanges(() => {
+      void getUnreadNotificationCount()
+        .then((count) => {
+          if (active) setUnreadNotifications(count);
+        })
+        .catch(() => undefined);
+    })
+      .then((cleanup) => {
+        if (!active) {
+          cleanup();
+          return;
+        }
+        unsubscribe = cleanup;
+      })
+      .catch(() => undefined);
+
+    return () => {
+      active = false;
+      unsubscribe?.();
+    };
+  }, []);
 
   const refresh = async () => {
     setRefreshing(true);
