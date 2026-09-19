@@ -197,6 +197,11 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
                   style={[styles.messageRow, mine ? styles.messageRowMine : styles.messageRowOther]}
                 >
                   <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleOther]}>
+                    {header?.kind === 'project' ? (
+                      <Text style={[styles.senderName, mine && styles.senderNameMine]}>
+                        {mine ? 'Tu' : message.senderName ?? 'Builder'}
+                      </Text>
+                    ) : null}
                     <Text style={[styles.messageText, mine && styles.messageTextMine]}>
                       {message.body}
                     </Text>
@@ -272,6 +277,8 @@ const makeStyles = (c: ColorPalette, top: number, bottom: number) =>
     bubble: { maxWidth: '82%', borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10, gap: 5 },
     bubbleMine: { backgroundColor: c.primary, borderBottomRightRadius: 5 },
     bubbleOther: { backgroundColor: c.cardBackground, borderWidth: 1, borderColor: c.border, borderBottomLeftRadius: 5 },
+    senderName: { fontSize: 11, fontWeight: '900', color: c.primary },
+    senderNameMine: { color: c.white },
     messageText: { fontSize: 14, lineHeight: 20, color: c.textStrong },
     messageTextMine: { color: c.white },
     time: { fontSize: 9, color: c.gray, alignSelf: 'flex-end' },
