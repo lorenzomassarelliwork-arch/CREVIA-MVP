@@ -274,15 +274,17 @@ export default function ProjectDetailScreen({ navigation, route }: Props) {
           <View style={styles.ownerPanel}>
             <Text style={styles.ownerTitle}>Gestione progetto</Text>
 
-            <TouchableOpacity
-              style={styles.addRoleButton}
-              onPress={() =>
-                navigation.navigate('AddProjectRole', { projectId: project.id })
-              }
-            >
-              <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
-              <Text style={styles.secondaryText}>Aggiungi ruolo</Text>
-            </TouchableOpacity>
+            {project.status === 'recruiting' || project.status === 'active' ? (
+              <TouchableOpacity
+                style={styles.addRoleButton}
+                onPress={() =>
+                  navigation.navigate('AddProjectRole', { projectId: project.id })
+                }
+              >
+                <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
+                <Text style={styles.secondaryText}>Aggiungi ruolo</Text>
+              </TouchableOpacity>
+            ) : null}
 
             <View style={styles.ownerActions}>
               <TouchableOpacity
