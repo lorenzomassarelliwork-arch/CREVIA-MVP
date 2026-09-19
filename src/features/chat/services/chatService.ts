@@ -33,6 +33,7 @@ export type ChatMessage = {
   id: string;
   conversationId: string;
   senderId: string;
+  senderName: string | null;
   body: string;
   createdAt: string;
 };
@@ -66,14 +67,26 @@ async function getAuthUserId(): Promise<string> {
   return user.id;
 }
 
-function mapMessage(row: MessageRow): ChatMessage {
+function mapMessage(row: MessageRow, senderName: string | null = null): ChatMessage {
   return {
     id: row.id,
     conversationId: row.conversation_id,
     senderId: row.sender_id,
+    senderName,
     body: row.body,
     createdAt: row.created_at,
   };
+}
+
+async function getSenderName(userId: string): Promise<string> {
+  try {
+    const profile = await getProfile(userId);
+    if (!profile) return 'Builder';
+    const name = `${profile.firstName} ${profile.lastName}`.trim();
+    return name || 'Builder';
+  } catch {
+    return 'Builder';
+  }
 }
 
 function normalizeChatError(message: string): string {
@@ -244,7 +257,20 @@ export async function listMessages(
     .limit(limit);
 
   if (error) throw new Error(error.message);
-  return ((data ?? []) as MessageRow[]).map(mapMessage);
+
+  const rows = (data ?? []) as MessageRow[];
+  const senderIds = [...new Set(rows.map((row) => row.sender_id))];
+  const senderNames = new Map<string, string>();
+
+  await Promise.all(
+    senderIds.map(async (senderId) => {
+      senderNames.set(senderId, await getSenderName(senderId));
+    })
+  );
+
+  return rows.map((row) =>
+    mapMessage(row, senderNames.get(row.sender_id) ?? 'Builder')
+  );
 }
 
 export async function sendMessage(
@@ -265,7 +291,8 @@ export async function sendMessage(
     .single();
 
   if (error) throw new Error(error.message);
-  return mapMessage(data as MessageRow);
+  const row = data as MessageRow;
+  return mapMessage(row, await getSenderName(row.sender_id));
 }
 
 export async function markChatRead(conversationId: string): Promise<void> {
@@ -299,7 +326,12 @@ export function subscribeToChatMessages(
         table: 'chat_messages',
         filter: `conversation_id=eq.${conversationId}`,
       },
-      (payload) => onMessage(mapMessage(payload.new as MessageRow))
+      (payload) => {
+        const row = payload.new as MessageRow;
+        void getSenderName(row.sender_id).then((senderName) =>
+          onMessage(mapMessage(row, senderName))
+        );
+      }
     )
     .subscribe();
 
