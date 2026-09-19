@@ -131,10 +131,10 @@ export default function ProjectDetailScreen({ navigation, route }: Props) {
     activeMembers.filter((member) => member.roleId === roleId).length;
 
   const apply = (role: ProjectRole) => {
-    if (project.status !== 'recruiting') {
+    if (project.status !== 'recruiting' && project.status !== 'active') {
       Alert.alert(
         'Candidature chiuse',
-        'Questo progetto non è più in fase di recruiting.'
+        'Questo progetto non accetta più candidature.'
       );
       return;
     }
@@ -273,6 +273,16 @@ export default function ProjectDetailScreen({ navigation, route }: Props) {
         {owner ? (
           <View style={styles.ownerPanel}>
             <Text style={styles.ownerTitle}>Gestione progetto</Text>
+
+            <TouchableOpacity
+              style={styles.addRoleButton}
+              onPress={() =>
+                navigation.navigate('AddProjectRole', { projectId: project.id })
+              }
+            >
+              <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
+              <Text style={styles.secondaryText}>Aggiungi ruolo</Text>
+            </TouchableOpacity>
 
             <View style={styles.ownerActions}>
               <TouchableOpacity
@@ -423,7 +433,7 @@ export default function ProjectDetailScreen({ navigation, route }: Props) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Ruoli</Text>
           <Text style={styles.sectionSubtitle}>
-            {project.status === 'recruiting'
+            {project.status === 'recruiting' || project.status === 'active'
               ? 'Candidati a un ruolo specifico.'
               : 'Il recruiting per questo progetto è chiuso.'}
           </Text>
@@ -450,14 +460,14 @@ export default function ProjectDetailScreen({ navigation, route }: Props) {
                     <View style={styles.flex}>
                       <Text style={styles.roleTitle}>{role.title}</Text>
                       <Text style={styles.roleSeats}>
-                        {project.status === 'recruiting'
+                        {project.status === 'recruiting' || project.status === 'active'
                           ? `${available} di ${role.seats} ${role.seats === 1 ? 'posto disponibile' : 'posti disponibili'}`
                           : `${occupied} membri nel ruolo`}
                       </Text>
                     </View>
 
                     {!owner &&
-                    project.status === 'recruiting' &&
+                    (project.status === 'recruiting' || project.status === 'active') &&
                     !applicationStatus &&
                     available > 0 ? (
                       <TouchableOpacity
@@ -603,6 +613,17 @@ const makeStyles = (c: ColorPalette, top: number, bottom: number) =>
       backgroundColor: c.cardBackground,
     },
     ownerTitle: { fontSize: 16, fontWeight: '900', color: c.textStrong },
+    addRoleButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 7,
+      paddingVertical: 12,
+      borderRadius: 11,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.primarySoft,
+    },
     ownerActions: { flexDirection: 'row', gap: 10 },
     secondaryButton: {
       flex: 1,
