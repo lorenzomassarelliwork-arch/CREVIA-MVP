@@ -147,8 +147,11 @@ function normalizeDbError(message: string): string {
   if (message.includes('Application already handled')) {
     return 'Questa candidatura è già stata gestita.';
   }
-  if (message.includes('Project is not recruiting')) {
-    return 'Il progetto non è più in recruiting.';
+  if (
+    message.includes('Project is not recruiting') ||
+    message.includes('Project is closed')
+  ) {
+    return 'Il progetto non accetta più candidature.';
   }
   if (message.includes('Member is not active')) {
     return 'Questo partecipante non è più attivo nel progetto.';
@@ -165,7 +168,10 @@ export async function createApplication(input: {
   portfolioUrl?: string | null;
 }): Promise<ApplicationWithApplicant> {
   const detail = await getProjectDetail(input.projectId);
-  if (!detail || detail.project.status !== 'recruiting') {
+  if (
+    !detail ||
+    (detail.project.status !== 'recruiting' && detail.project.status !== 'active')
+  ) {
     throw new Error('Le candidature per questo progetto sono chiuse.');
   }
   if (isProjectOwner(detail.project)) {
@@ -319,8 +325,11 @@ export async function acceptApplication(
     if (!detail || !isProjectOwner(detail.project)) {
       throw new Error('Solo il creator può gestire le candidature.');
     }
-    if (detail.project.status !== 'recruiting') {
-      throw new Error('Il progetto non è più in recruiting.');
+    if (
+      detail.project.status !== 'recruiting' &&
+      detail.project.status !== 'active'
+    ) {
+      throw new Error('Il progetto non accetta più candidature.');
     }
 
     const role = detail.roles.find((item) => item.id === demo.roleId);
