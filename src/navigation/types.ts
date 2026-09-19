@@ -15,6 +15,7 @@ export type RootStackParamList = {
   Main: NavigatorScreenParams<MainTabParamList> | undefined;
   Notifications: undefined;
   ChatRoom: { conversationId: string };
+  AddProjectRole: { projectId: string };
   ProjectDetail: { projectId: string };
   ApplyToProject: { projectId: string; roleId: string };
   ProjectApplications: { projectId: string };
