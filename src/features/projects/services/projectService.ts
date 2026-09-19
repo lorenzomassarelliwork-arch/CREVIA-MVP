@@ -15,6 +15,13 @@ import {
 } from '../../profile/services/profileService';
 
 export type ProjectDetailData = { project: Project; roles: ProjectRole[] };
+export type NewProjectRoleInput = {
+  title: string;
+  description: string;
+  requiredSkills: string[];
+  seats: number;
+};
+
 export type NewProjectInput = {
   title: string;
   description: string;
@@ -28,12 +35,7 @@ export type NewProjectInput = {
   weeklyCommitmentHours?: number | null;
   compensationType: CompensationType;
   compensationNotes?: string | null;
-  roles: Array<{
-    title: string;
-    description: string;
-    requiredSkills: string[];
-    seats: number;
-  }>;
+  roles: NewProjectRoleInput[];
 };
 
 type ProjectRow = {
@@ -325,6 +327,52 @@ export async function createProject(input: NewProjectInput): Promise<Project> {
   if (!detail) throw new Error('Progetto creato ma non recuperabile.');
 
   return detail.project;
+}
+
+export async function addProjectRole(
+  projectId: string,
+  input: NewProjectRoleInput
+): Promise<ProjectRole> {
+  const detail = await getProjectDetail(projectId);
+  if (!detail) throw new Error('Progetto non trovato.');
+  if (!isProjectOwner(detail.project)) {
+    throw new Error('Solo il creator può aggiungere ruoli al progetto.');
+  }
+  if (!['recruiting', 'active'].includes(detail.project.status)) {
+    throw new Error('Non puoi aggiungere ruoli a un progetto chiuso.');
+  }
+
+  if (input.title.trim().length < 2) {
+    throw new Error('Il titolo del ruolo deve contenere almeno 2 caratteri.');
+  }
+  if (input.description.trim().length < 5) {
+    throw new Error('La descrizione del ruolo deve contenere almeno 5 caratteri.');
+  }
+  const skills = input.requiredSkills.map((skill) => skill.trim()).filter(Boolean);
+  if (skills.length < 1) {
+    throw new Error('Aggiungi almeno una competenza al ruolo.');
+  }
+  if (!Number.isInteger(input.seats) || input.seats < 1 || input.seats > 50) {
+    throw new Error('I posti disponibili devono essere un numero intero da 1 a 50.');
+  }
+
+  const { data, error } = await supabase
+    .from('project_roles')
+    .insert({
+      project_id: projectId,
+      title: input.title.trim(),
+      description: input.description.trim(),
+      required_skills: skills,
+      seats: input.seats,
+    })
+    .select('*')
+    .single();
+
+  if (error) throw new Error(normalizeProjectError(error.message));
+
+  const role = mapRoleRow(data as ProjectRoleRow);
+  roleCache = [...roleCache.filter((item) => item.id !== role.id), role];
+  return role;
 }
 
 export async function setProjectStatus(
