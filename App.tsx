@@ -17,6 +17,7 @@ import CreateProjectScreen from './src/features/projects/screens/CreateProjectSc
 import ProjectDetailScreen from './src/features/projects/screens/ProjectDetailScreen';
 import ProjectTeamScreen from './src/features/projects/screens/ProjectTeamScreen';
 import CompleteProjectScreen from './src/features/projects/screens/CompleteProjectScreen';
+import AddProjectRoleScreen from './src/features/projects/screens/AddProjectRoleScreen';
 import ApplyToProjectScreen from './src/features/applications/screens/ApplyToProjectScreen';
 import ProjectApplicationsScreen from './src/features/applications/screens/ProjectApplicationsScreen';
 import ChatsScreen from './src/features/chat/screens/ChatsScreen';
@@ -145,6 +146,7 @@ function AppNavigator() {
             />
             <Stack.Screen name="Notifications" component={NotificationsScreen} />
             <Stack.Screen name="ChatRoom" component={ChatRoomScreen} />
+            <Stack.Screen name="AddProjectRole" component={AddProjectRoleScreen} />
             <Stack.Screen name="ProjectDetail" component={ProjectDetailScreen} />
             <Stack.Screen
               name="ApplyToProject"
