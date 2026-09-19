@@ -129,7 +129,7 @@ export default function ProjectApplicationsScreen({ navigation, route }: Props) 
         <View style={styles.loading}><ActivityIndicator size="large" color={colors.primary} /></View>
       ) : (
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          {projectStatus && projectStatus !== 'recruiting' ? (
+          {projectStatus && projectStatus !== 'recruiting' && projectStatus !== 'active' ? (
             <View style={styles.closedBanner}>
               <Ionicons name="lock-closed-outline" size={17} color={colors.gray} />
               <Text style={styles.closedBannerText}>
@@ -206,7 +206,8 @@ export default function ProjectApplicationsScreen({ navigation, route }: Props) 
                     <Text style={styles.messageText}>Scrivi al candidato</Text>
                   </TouchableOpacity>
 
-                  {application.status === 'pending' && projectStatus === 'recruiting' ? (
+                  {application.status === 'pending' &&
+                  (projectStatus === 'recruiting' || projectStatus === 'active') ? (
                     <View style={styles.actions}>
                       <TouchableOpacity disabled={disabled} style={styles.rejectButton} onPress={() => reject(application)}>
                         <Text style={styles.rejectText}>Rifiuta</Text>
