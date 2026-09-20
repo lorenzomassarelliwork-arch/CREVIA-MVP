@@ -7,6 +7,7 @@ import type {
 } from '../../../domain/models';
 import { CURRENT_USER_ID } from '../../../core/session';
 import { supabase } from '../../../lib/supabase';
+import { assertAllowedContent, normalizeModerationError } from '../../../lib/contentModeration';
 import {
   getProjectDetail,
   getProjectRole,
@@ -138,6 +139,9 @@ async function buildApplicationWithApplicant(
 }
 
 function normalizeDbError(message: string): string {
+  if (message.includes('CONTENT_NOT_ALLOWED')) {
+    return normalizeModerationError(message);
+  }
   if (message.includes('applications_active_unique_idx')) {
     return 'Hai già una candidatura attiva per questo ruolo.';
   }
@@ -167,6 +171,8 @@ export async function createApplication(input: {
   motivation: string;
   portfolioUrl?: string | null;
 }): Promise<ApplicationWithApplicant> {
+  assertAllowedContent([input.motivation]);
+
   const detail = await getProjectDetail(input.projectId);
   if (
     !detail ||
