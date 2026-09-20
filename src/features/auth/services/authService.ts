@@ -1,5 +1,6 @@
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../../../lib/supabase';
+import { assertAllowedContent, normalizeModerationError } from '../../../lib/contentModeration';
 
 export type RegisterInput = {
   firstName: string;
@@ -26,6 +27,9 @@ function normalizeAuthError(message: string): string {
   if (lower.includes('rate limit')) {
     return 'Troppi tentativi. Riprova tra qualche minuto.';
   }
+  if (message.includes('CONTENT_NOT_ALLOWED')) {
+    return normalizeModerationError(message);
+  }
 
   return message;
 }
@@ -48,6 +52,8 @@ export async function handleUserLogin(
 export async function registerUser(
   input: RegisterInput
 ): Promise<{ requiresEmailConfirmation: boolean }> {
+  assertAllowedContent([input.firstName, input.lastName]);
+
   const { data, error } = await supabase.auth.signUp({
     email: input.email.trim().toLowerCase(),
     password: input.password,
