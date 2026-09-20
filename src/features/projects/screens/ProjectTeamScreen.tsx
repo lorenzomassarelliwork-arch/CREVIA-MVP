@@ -362,7 +362,10 @@ export default function ProjectTeamScreen({ navigation, route }: Props) {
               const canConfirm =
                 experience?.verificationStatus === 'pending' &&
                 member.userId === CURRENT_USER_ID;
-              const canRemove = canManageTeam && member.status === 'active';
+              const canRemove =
+                canManageTeam &&
+                member.status === 'active' &&
+                member.userId !== CURRENT_USER_ID;
               const canMessage =
                 member.userId !== CURRENT_USER_ID &&
                 (member.status === 'active' || member.status === 'completed');
