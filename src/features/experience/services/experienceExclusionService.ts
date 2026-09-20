@@ -54,7 +54,7 @@ export async function getExperienceExclusion(id: string): Promise<ExperienceExcl
 }
 
 export async function acknowledgeExperienceExclusion(id: string): Promise<void> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('experience_exclusions')
     .update({
       response_status: 'acknowledged',
@@ -62,16 +62,19 @@ export async function acknowledgeExperienceExclusion(id: string): Promise<void> 
       responded_at: new Date().toISOString(),
     })
     .eq('id', id)
-    .eq('response_status', 'pending');
+    .eq('response_status', 'pending')
+    .select('id')
+    .maybeSingle();
 
   if (error) throw new Error(error.message);
+  if (!data) throw new Error('Questo esito è già stato gestito.');
 }
 
 export async function reportExperienceExclusion(id: string, notes?: string | null): Promise<void> {
   const cleanNotes = notes?.trim() || null;
   assertAllowedContent([cleanNotes]);
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('experience_exclusions')
     .update({
       response_status: 'reported',
@@ -79,7 +82,10 @@ export async function reportExperienceExclusion(id: string, notes?: string | nul
       responded_at: new Date().toISOString(),
     })
     .eq('id', id)
-    .eq('response_status', 'pending');
+    .eq('response_status', 'pending')
+    .select('id')
+    .maybeSingle();
 
   if (error) throw new Error(normalizeModerationError(error.message));
+  if (!data) throw new Error('Questo esito è già stato gestito.');
 }
