@@ -1,6 +1,6 @@
 import { CURRENT_USER_ID } from '../../../core/session';
 import { supabase } from '../../../lib/supabase';
-import { getProfile, type UpdateProfileInput } from '../../profile/services/profileService';
+import { getProfile } from '../../profile/services/profileService';
 import type { UserProfile } from '../../../domain/models';
 
 export type ProjectAdmin = {
