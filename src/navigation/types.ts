@@ -16,6 +16,8 @@ export type RootStackParamList = {
   Notifications: undefined;
   ChatRoom: { conversationId: string };
   AddProjectRole: { projectId: string };
+  LeaveProject: { projectId: string };
+  ExperienceExclusion: { exclusionId: string };
   ProjectDetail: { projectId: string };
   ApplyToProject: { projectId: string; roleId: string };
   ProjectApplications: { projectId: string };
