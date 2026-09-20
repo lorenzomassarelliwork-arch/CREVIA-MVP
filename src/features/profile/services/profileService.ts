@@ -1,6 +1,7 @@
 import type { UserProfile } from '../../../domain/models';
 import { CURRENT_USER_ID } from '../../../core/session';
 import { supabase } from '../../../lib/supabase';
+import { assertAllowedContent, normalizeModerationError } from '../../../lib/contentModeration';
 
 const now = '2026-09-01T09:00:00.000Z';
 
@@ -167,6 +168,15 @@ export async function updateCurrentProfile(
     new Set(input.skills.map((skill) => skill.trim()).filter(Boolean))
   );
 
+  assertAllowedContent([
+    firstName,
+    lastName,
+    headline,
+    bio,
+    availability,
+    ...skills,
+  ]);
+
   if (firstName.length < 2 || lastName.length < 2) {
     throw new Error('Nome e cognome devono contenere almeno 2 caratteri.');
   }
@@ -214,7 +224,7 @@ export async function updateCurrentProfile(
     .select('*')
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(normalizeModerationError(error.message));
 
   const updated = mapProfileRow(data as ProfileRow, CURRENT_USER_ID);
   cacheCurrentProfile(updated);
