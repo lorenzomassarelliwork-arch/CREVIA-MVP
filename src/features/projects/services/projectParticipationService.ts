@@ -1,4 +1,3 @@
-import { CURRENT_USER_ID } from '../../../core/session';
 import { supabase } from '../../../lib/supabase';
 import { assertAllowedContent, normalizeModerationError } from '../../../lib/contentModeration';
 
