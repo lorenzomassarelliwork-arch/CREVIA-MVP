@@ -19,6 +19,7 @@ import ProjectTeamScreen from './src/features/projects/screens/ProjectTeamScreen
 import CompleteProjectScreen from './src/features/projects/screens/CompleteProjectScreen';
 import AddProjectRoleScreen from './src/features/projects/screens/AddProjectRoleScreen';
 import LeaveProjectScreen from './src/features/projects/screens/LeaveProjectScreen';
+import ManageProjectAdminsScreen from './src/features/projects/screens/ManageProjectAdminsScreen';
 import ExperienceExclusionScreen from './src/features/experience/screens/ExperienceExclusionScreen';
 import ApplyToProjectScreen from './src/features/applications/screens/ApplyToProjectScreen';
 import ProjectApplicationsScreen from './src/features/applications/screens/ProjectApplicationsScreen';
@@ -150,6 +151,7 @@ function AppNavigator() {
             <Stack.Screen name="ChatRoom" component={ChatRoomScreen} />
             <Stack.Screen name="AddProjectRole" component={AddProjectRoleScreen} />
             <Stack.Screen name="LeaveProject" component={LeaveProjectScreen} />
+            <Stack.Screen name="ManageProjectAdmins" component={ManageProjectAdminsScreen} />
             <Stack.Screen name="ExperienceExclusion" component={ExperienceExclusionScreen} />
             <Stack.Screen name="ProjectDetail" component={ProjectDetailScreen} />
             <Stack.Screen
