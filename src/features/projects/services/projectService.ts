@@ -8,13 +8,19 @@ import type {
 } from '../../../domain/models';
 import { CURRENT_USER_ID } from '../../../core/session';
 import { supabase } from '../../../lib/supabase';
+import { assertAllowedContent, normalizeModerationError } from '../../../lib/contentModeration';
 import { MVP_PROJECTS, MVP_PROJECT_ROLES } from '../data/mvpProjectData';
 import {
   getProfileDisplayName,
   getProfileSnapshot,
 } from '../../profile/services/profileService';
 
-export type ProjectDetailData = { project: Project; roles: ProjectRole[] };
+export type ProjectDetailData = {
+  project: Project;
+  roles: ProjectRole[];
+  canManage: boolean;
+  isPrimaryOwner: boolean;
+};
 export type NewProjectRoleInput = {
   title: string;
   description: string;
@@ -88,6 +94,20 @@ async function getAuthenticatedUserId(): Promise<string> {
 }
 
 function validateNewProjectInput(input: NewProjectInput): void {
+  assertAllowedContent([
+    input.title,
+    input.description,
+    input.goal,
+    input.deliverable,
+    input.category,
+    input.compensationNotes,
+    ...input.roles.flatMap((role) => [
+      role.title,
+      role.description,
+      ...role.requiredSkills,
+    ]),
+  ]);
+
   if (input.title.trim().length < 3) {
     throw new Error('Il nome del progetto deve contenere almeno 3 caratteri.');
   }
@@ -136,6 +156,9 @@ function validateNewProjectInput(input: NewProjectInput): void {
 }
 
 function normalizeProjectError(message: string): string {
+  if (message.includes('CONTENT_NOT_ALLOWED')) {
+    return normalizeModerationError(message);
+  }
   if (message.includes('projects_description_check')) {
     return 'La descrizione del progetto deve contenere almeno 10 caratteri.';
   }
@@ -238,22 +261,34 @@ export async function getProjectDetail(
     return {
       project: demo,
       roles: roleCache.filter((role) => role.projectId === projectId),
+      canManage: isProjectOwner(demo),
+      isPrimaryOwner: isProjectOwner(demo),
     };
   }
 
   const authUserId = await getAuthenticatedUserId();
-  const [{ data: projectData, error: projectError }, { data: roleData, error: roleError }] =
-    await Promise.all([
-      supabase.from('projects').select('*').eq('id', projectId).maybeSingle(),
-      supabase
-        .from('project_roles')
-        .select('*')
-        .eq('project_id', projectId)
-        .order('created_at', { ascending: true }),
-    ]);
+  const [
+    { data: projectData, error: projectError },
+    { data: roleData, error: roleError },
+    { data: adminData, error: adminError },
+  ] = await Promise.all([
+    supabase.from('projects').select('*').eq('id', projectId).maybeSingle(),
+    supabase
+      .from('project_roles')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: true }),
+    supabase
+      .from('project_admins')
+      .select('user_id')
+      .eq('project_id', projectId)
+      .eq('user_id', authUserId)
+      .maybeSingle(),
+  ]);
 
   if (projectError) throw new Error(projectError.message);
   if (roleError) throw new Error(roleError.message);
+  if (adminError) throw new Error(adminError.message);
   if (!projectData) return null;
 
   const project = mapProjectRow(projectData as ProjectRow, authUserId);
@@ -265,7 +300,13 @@ export async function getProjectDetail(
   ];
   cacheRoles(roles, project.id);
 
-  return { project, roles };
+  const isPrimaryOwner = (projectData as ProjectRow).owner_id === authUserId;
+  return {
+    project,
+    roles,
+    isPrimaryOwner,
+    canManage: isPrimaryOwner || Boolean(adminData),
+  };
 }
 
 export function getProjectRole(roleId: string): ProjectRole | null {
@@ -335,12 +376,14 @@ export async function addProjectRole(
 ): Promise<ProjectRole> {
   const detail = await getProjectDetail(projectId);
   if (!detail) throw new Error('Progetto non trovato.');
-  if (!isProjectOwner(detail.project)) {
-    throw new Error('Solo il creator può aggiungere ruoli al progetto.');
+  if (!detail.canManage) {
+    throw new Error('Solo un admin del progetto può aggiungere ruoli.');
   }
   if (!['recruiting', 'active'].includes(detail.project.status)) {
     throw new Error('Non puoi aggiungere ruoli a un progetto chiuso.');
   }
+
+  assertAllowedContent([input.title, input.description, ...input.requiredSkills]);
 
   if (input.title.trim().length < 2) {
     throw new Error('Il titolo del ruolo deve contenere almeno 2 caratteri.');
@@ -383,8 +426,8 @@ export async function setProjectStatus(
   if (!detail) throw new Error('Progetto non trovato.');
 
   const project = detail.project;
-  if (!isProjectOwner(project)) {
-    throw new Error('Solo il creator può modificare lo stato del progetto.');
+  if (!detail.canManage) {
+    throw new Error('Solo un admin del progetto può modificare lo stato.');
   }
 
   const allowed =
@@ -402,7 +445,7 @@ export async function setProjectStatus(
     .select('*')
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(normalizeModerationError(error.message));
 
   const authUserId = await getAuthenticatedUserId();
   const updated = mapProjectRow(data as ProjectRow, authUserId);
