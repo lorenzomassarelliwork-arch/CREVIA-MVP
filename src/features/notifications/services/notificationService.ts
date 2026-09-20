@@ -9,7 +9,11 @@ export type NotificationType =
   | 'experience_pending'
   | 'experience_verified'
   | 'member_removed'
-  | 'message_received';
+  | 'message_received'
+  | 'member_left'
+  | 'cofounder_added'
+  | 'cofounder_removed'
+  | 'experience_not_selected';
 
 export type AppNotification = {
   id: string;
@@ -19,6 +23,7 @@ export type AppNotification = {
   applicationId: string | null;
   experienceId: string | null;
   conversationId: string | null;
+  experienceExclusionId: string | null;
   title: string;
   body: string;
   readAt: string | null;
@@ -33,6 +38,7 @@ type NotificationRow = {
   application_id: string | null;
   experience_id: string | null;
   conversation_id: string | null;
+  experience_exclusion_id: string | null;
   title: string;
   body: string;
   read_at: string | null;
@@ -48,6 +54,7 @@ function mapNotification(row: NotificationRow): AppNotification {
     applicationId: row.application_id,
     experienceId: row.experience_id,
     conversationId: row.conversation_id,
+    experienceExclusionId: row.experience_exclusion_id,
     title: row.title,
     body: row.body,
     readAt: row.read_at,
