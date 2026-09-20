@@ -54,6 +54,10 @@ function iconForType(type: NotificationType): keyof typeof Ionicons.glyphMap {
     case 'experience_verified': return 'shield-checkmark-outline';
     case 'member_removed': return 'person-remove-outline';
     case 'message_received': return 'chatbubble-ellipses-outline';
+    case 'member_left': return 'exit-outline';
+    case 'cofounder_added': return 'shield-checkmark-outline';
+    case 'cofounder_removed': return 'shield-outline';
+    case 'experience_not_selected': return 'alert-circle-outline';
   }
 }
 
@@ -113,6 +117,12 @@ export default function NotificationsScreen({ navigation }: Props) {
     if (!item.readAt) {
       await markNotificationRead(item.id);
       setNotifications((current) => current.map((entry) => entry.id === item.id ? { ...entry, readAt: new Date().toISOString() } : entry));
+    }
+    if (item.type === 'experience_not_selected' && item.experienceExclusionId) {
+      navigation.navigate('ExperienceExclusion', {
+        exclusionId: item.experienceExclusionId,
+      });
+      return;
     }
     if (item.type === 'message_received' && item.conversationId) {
       navigation.navigate('ChatRoom', { conversationId: item.conversationId });
