@@ -1,6 +1,7 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 import { supabase } from '../../../lib/supabase';
+import { assertAllowedContent, normalizeModerationError } from '../../../lib/contentModeration';
 import { getProfile } from '../../profile/services/profileService';
 
 type ConversationKind = 'direct' | 'project';
@@ -279,6 +280,7 @@ export async function sendMessage(
 ): Promise<ChatMessage> {
   const trimmed = body.trim();
   if (!trimmed) throw new Error('Scrivi un messaggio prima di inviare.');
+  assertAllowedContent([trimmed]);
   if (trimmed.length > 4000) {
     throw new Error('Il messaggio può contenere al massimo 4000 caratteri.');
   }
@@ -290,7 +292,7 @@ export async function sendMessage(
     .select('*')
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(normalizeModerationError(error.message));
   const row = data as MessageRow;
   return mapMessage(row, await getSenderName(row.sender_id));
 }
