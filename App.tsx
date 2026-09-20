@@ -18,6 +18,8 @@ import ProjectDetailScreen from './src/features/projects/screens/ProjectDetailSc
 import ProjectTeamScreen from './src/features/projects/screens/ProjectTeamScreen';
 import CompleteProjectScreen from './src/features/projects/screens/CompleteProjectScreen';
 import AddProjectRoleScreen from './src/features/projects/screens/AddProjectRoleScreen';
+import LeaveProjectScreen from './src/features/projects/screens/LeaveProjectScreen';
+import ExperienceExclusionScreen from './src/features/experience/screens/ExperienceExclusionScreen';
 import ApplyToProjectScreen from './src/features/applications/screens/ApplyToProjectScreen';
 import ProjectApplicationsScreen from './src/features/applications/screens/ProjectApplicationsScreen';
 import ChatsScreen from './src/features/chat/screens/ChatsScreen';
@@ -147,6 +149,8 @@ function AppNavigator() {
             <Stack.Screen name="Notifications" component={NotificationsScreen} />
             <Stack.Screen name="ChatRoom" component={ChatRoomScreen} />
             <Stack.Screen name="AddProjectRole" component={AddProjectRoleScreen} />
+            <Stack.Screen name="LeaveProject" component={LeaveProjectScreen} />
+            <Stack.Screen name="ExperienceExclusion" component={ExperienceExclusionScreen} />
             <Stack.Screen name="ProjectDetail" component={ProjectDetailScreen} />
             <Stack.Screen
               name="ApplyToProject"
