@@ -343,6 +343,28 @@ export default function ProjectTeamScreen({ navigation, route }: Props) {
             </View>
           </View>
 
+          {canManageAdmins ? (
+            <TouchableOpacity
+              style={styles.manageAdminsCard}
+              onPress={() =>
+                navigation.navigate('ManageProjectAdmins', {
+                  projectId: route.params.projectId,
+                })
+              }
+            >
+              <View style={styles.projectChatIcon}>
+                <Ionicons name="shield-checkmark-outline" size={21} color={colors.primary} />
+              </View>
+              <View style={styles.flex}>
+                <Text style={styles.projectChatTitle}>Gestisci co-founder</Text>
+                <Text style={styles.projectChatText}>
+                  Nomina altri utenti Crevia o rimuovi i co-founder attuali.
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.gray} />
+            </TouchableOpacity>
+          ) : null}
+
           <Text style={styles.sectionTitle}>Membri</Text>
 
           {members.length === 0 ? (
@@ -521,6 +543,16 @@ const makeStyles = (c: ColorPalette, top: number, bottom: number) =>
       padding: 14,
       borderRadius: 16,
       backgroundColor: c.primarySoft,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    manageAdminsCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      padding: 14,
+      borderRadius: 16,
+      backgroundColor: c.cardBackground,
       borderWidth: 1,
       borderColor: c.border,
     },
