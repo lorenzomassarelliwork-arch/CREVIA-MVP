@@ -317,14 +317,25 @@ export default function ProjectTeamScreen({ navigation, route }: Props) {
               <Text style={styles.name}>{ownerLabel}</Text>
               <Text style={styles.role}>Founder principale</Text>
               {ownerProfileId ? (
-                <TouchableOpacity
-                  style={styles.smallButton}
-                  onPress={() =>
-                    navigation.navigate('PublicProfile', { userId: ownerProfileId })
-                  }
-                >
-                  <Text style={styles.smallButtonText}>Apri profilo</Text>
-                </TouchableOpacity>
+                <View style={styles.inlineActions}>
+                  <TouchableOpacity
+                    style={styles.smallButton}
+                    onPress={() =>
+                      navigation.navigate('PublicProfile', { userId: ownerProfileId })
+                    }
+                  >
+                    <Text style={styles.smallButtonText}>Apri profilo</Text>
+                  </TouchableOpacity>
+                  {ownerProfileId !== CURRENT_USER_ID ? (
+                    <TouchableOpacity
+                      style={styles.smallButton}
+                      onPress={() => void openDirectChat(ownerProfileId)}
+                      disabled={chatLoading === ownerProfileId}
+                    >
+                      <Text style={styles.smallButtonText}>Messaggio</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
               ) : null}
             </View>
             <View style={styles.badge}>
