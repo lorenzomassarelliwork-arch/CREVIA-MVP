@@ -18,6 +18,7 @@ export type RootStackParamList = {
   AddProjectRole: { projectId: string };
   LeaveProject: { projectId: string };
   ExperienceExclusion: { exclusionId: string };
+  ManageProjectAdmins: { projectId: string };
   ProjectDetail: { projectId: string };
   ApplyToProject: { projectId: string; roleId: string };
   ProjectApplications: { projectId: string };
