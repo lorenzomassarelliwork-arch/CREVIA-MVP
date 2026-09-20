@@ -30,7 +30,6 @@ import {
   getOwnerLabel,
   getProjectDetail,
   getProjectStatusLabel,
-  isProjectOwner,
   setProjectStatus,
   type ProjectDetailData,
 } from '../services/projectService';
@@ -116,7 +115,8 @@ export default function ProjectDetailScreen({ navigation, route }: Props) {
   }
 
   const { project, roles } = data;
-  const owner = isProjectOwner(project);
+  const owner = data.canManage;
+  const primaryOwner = data.isPrimaryOwner;
   const activeMembers = members.filter((member) => member.status === 'active');
   const visibleTeamMembers = members.filter(
     (member) => member.status === 'active' || member.status === 'completed'
@@ -125,6 +125,10 @@ export default function ProjectDetailScreen({ navigation, route }: Props) {
     (member) =>
       member.userId === CURRENT_USER_ID &&
       (member.status === 'active' || member.status === 'completed')
+  );
+  const currentUserIsActiveMember = members.some(
+    (member) =>
+      member.userId === CURRENT_USER_ID && member.status === 'active'
   );
 
   const occupiedSeats = (roleId: string) =>
@@ -351,6 +355,18 @@ export default function ProjectDetailScreen({ navigation, route }: Props) {
               </Text>
             ) : null}
 
+            {currentUserIsActiveMember && !primaryOwner ? (
+              <TouchableOpacity
+                style={styles.leaveProjectButton}
+                onPress={() =>
+                  navigation.navigate('LeaveProject', { projectId: project.id })
+                }
+              >
+                <Ionicons name="exit-outline" size={17} color={colors.error} />
+                <Text style={styles.leaveProjectText}>Abbandona progetto</Text>
+              </TouchableOpacity>
+            ) : null}
+
             {project.status === 'recruiting' || project.status === 'active' ? (
               <TouchableOpacity
                 style={styles.cancelButton}
@@ -361,19 +377,29 @@ export default function ProjectDetailScreen({ navigation, route }: Props) {
             ) : null}
           </View>
         ) : currentUserIsMember ? (
-          <TouchableOpacity
-            style={styles.memberTeamButton}
-            onPress={() =>
-              navigation.navigate('ProjectTeam', { projectId: project.id })
-            }
-          >
-            <Ionicons
-              name="people-outline"
-              size={18}
-              color={colors.primary}
-            />
-            <Text style={styles.secondaryText}>Apri il team del progetto</Text>
-          </TouchableOpacity>
+          <View style={styles.memberActions}>
+            <TouchableOpacity
+              style={styles.memberTeamButton}
+              onPress={() =>
+                navigation.navigate('ProjectTeam', { projectId: project.id })
+              }
+            >
+              <Ionicons name="people-outline" size={18} color={colors.primary} />
+              <Text style={styles.secondaryText}>Apri il team del progetto</Text>
+            </TouchableOpacity>
+
+            {currentUserIsActiveMember ? (
+              <TouchableOpacity
+                style={styles.leaveProjectButton}
+                onPress={() =>
+                  navigation.navigate('LeaveProject', { projectId: project.id })
+                }
+              >
+                <Ionicons name="exit-outline" size={17} color={colors.error} />
+                <Text style={styles.leaveProjectText}>Abbandona progetto</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
         ) : null}
 
         <View style={styles.infoGrid}>
@@ -637,6 +663,7 @@ const makeStyles = (c: ColorPalette, top: number, bottom: number) =>
       borderRadius: 11,
       backgroundColor: c.actionSurface,
     },
+    memberActions: { gap: 10 },
     memberTeamButton: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -654,6 +681,18 @@ const makeStyles = (c: ColorPalette, top: number, bottom: number) =>
       backgroundColor: c.primary,
     },
     primaryText: { color: c.white, fontWeight: '900' },
+    leaveProjectButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 7,
+      paddingVertical: 11,
+      borderRadius: 11,
+      borderWidth: 1,
+      borderColor: c.dangerBorder,
+      backgroundColor: c.dangerSoft,
+    },
+    leaveProjectText: { color: c.error, fontSize: 12, fontWeight: '900' },
     cancelButton: {
       alignItems: 'center',
       paddingVertical: 11,
