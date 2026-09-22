@@ -238,17 +238,33 @@ export default function ProjectDetailScreen({ navigation, route }: Props) {
 
         <Text style={styles.headerTitle}>Progetto</Text>
 
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={() => void toggleSaved()}
-          accessibilityLabel={saved ? 'Rimuovi dai salvati' : 'Salva progetto'}
-        >
-          <Ionicons
-            name={saved ? 'bookmark' : 'bookmark-outline'}
-            size={20}
-            color={colors.primary}
-          />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          {!primaryOwner ? (
+            <TouchableOpacity
+              style={styles.headerButton}
+              onPress={() =>
+                navigation.navigate('ReportContent', {
+                  targetType: 'project',
+                  targetId: project.id,
+                })
+              }
+              accessibilityLabel="Segnala progetto"
+            >
+              <Ionicons name="flag-outline" size={19} color={colors.primary} />
+            </TouchableOpacity>
+          ) : null}
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => void toggleSaved()}
+            accessibilityLabel={saved ? 'Rimuovi dai salvati' : 'Salva progetto'}
+          >
+            <Ionicons
+              name={saved ? 'bookmark' : 'bookmark-outline'}
+              size={20}
+              color={colors.primary}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -607,6 +623,7 @@ const makeStyles = (c: ColorPalette, top: number, bottom: number) =>
       backgroundColor: c.actionSurface,
     },
     headerTitle: { fontSize: 16, fontWeight: '800', color: c.textStrong },
+    headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     content: { padding: 20, gap: 22, paddingBottom: 30 + bottom },
     hero: { gap: 9 },
     topRow: { flexDirection: 'row', justifyContent: 'space-between' },
