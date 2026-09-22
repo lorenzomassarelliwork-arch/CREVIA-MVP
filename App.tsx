@@ -29,6 +29,7 @@ import NotificationsScreen from './src/features/notifications/screens/Notificati
 import ProfileScreen from './src/features/profile/screens/ProfileScreen';
 import EditProfileScreen from './src/features/profile/screens/EditProfileScreen';
 import PublicProfileScreen from './src/features/profile/screens/PublicProfileScreen';
+import ReportContentScreen from './src/features/safety/screens/ReportContentScreen';
 import { supabase } from './src/lib/supabase';
 import { handleSupabaseAuthCallback } from './src/features/auth/services/authCallbackService';
 import {
@@ -172,6 +173,7 @@ function AppNavigator() {
               name="PublicProfile"
               component={PublicProfileScreen}
             />
+            <Stack.Screen name="ReportContent" component={ReportContentScreen} />
           </Stack.Navigator>
         ) : (
           <Stack.Navigator
