@@ -284,9 +284,27 @@ export default function ProjectDetailScreen({ navigation, route }: Props) {
           </View>
 
           <Text style={styles.title}>{project.title}</Text>
-          <Text style={styles.creator}>
-            Creato da {getOwnerLabel(project)}
-          </Text>
+          {data.ownerProfile ? (
+            <TouchableOpacity
+              style={styles.creatorLink}
+              activeOpacity={0.72}
+              onPress={() =>
+                navigation.navigate('PublicProfile', {
+                  userId: project.ownerId,
+                })
+              }
+            >
+              <Text style={styles.creatorPrefix}>Creato da </Text>
+              <Text style={styles.creator}>
+                {data.ownerProfile.firstName} {data.ownerProfile.lastName}
+              </Text>
+              <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+            </TouchableOpacity>
+          ) : (
+            <Text style={styles.creatorFallback}>
+              Creato da {getOwnerLabel(project)}
+            </Text>
+          )}
           <Text style={styles.description}>{project.description}</Text>
         </View>
 
@@ -647,7 +665,14 @@ const makeStyles = (c: ColorPalette, top: number, bottom: number) =>
       fontWeight: '900',
       color: c.textStrong,
     },
-    creator: { fontSize: 12, fontWeight: '700', color: c.primary },
+    creatorLink: {
+      alignSelf: 'flex-start',
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    creatorPrefix: { fontSize: 12, fontWeight: '600', color: c.textMuted },
+    creator: { fontSize: 12, fontWeight: '900', color: c.primary },
+    creatorFallback: { fontSize: 12, fontWeight: '700', color: c.textMuted },
     description: { fontSize: 15, lineHeight: 23, color: c.textMuted },
     ownerPanel: {
       gap: 12,
