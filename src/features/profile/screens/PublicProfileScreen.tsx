@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   ScrollView,
   StyleSheet,
@@ -24,8 +25,16 @@ import {
   getProfileDisplayName,
   getProfileInitials,
 } from '../services/profileService';
+import {
+  blockUser,
+  getDirectBlockStatus,
+  unblockUser,
+} from '../../safety/services/safetyService';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PublicProfile'>;
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export default function PublicProfileScreen({ navigation, route }: Props) {
   const { colors } = useAppPreferences();
@@ -36,13 +45,26 @@ export default function PublicProfileScreen({ navigation, route }: Props) {
   );
 
   const [overview, setOverview] = useState<ProfileOverview | null>(null);
+  const [blockedByMe, setBlockedByMe] = useState(false);
+  const [safetyLoading, setSafetyLoading] = useState(false);
   const [loading, setLoading] = useState(true);
+  const isRealUser = UUID_PATTERN.test(route.params.userId);
 
   const load = useCallback(async () => {
     setLoading(true);
-    setOverview(await getProfileOverview(route.params.userId));
-    setLoading(false);
-  }, [route.params.userId]);
+    try {
+      const [nextOverview, blockStatus] = await Promise.all([
+        getProfileOverview(route.params.userId),
+        isRealUser
+          ? getDirectBlockStatus(route.params.userId).catch(() => null)
+          : Promise.resolve(null),
+      ]);
+      setOverview(nextOverview);
+      setBlockedByMe(blockStatus?.blockedByMe ?? false);
+    } finally {
+      setLoading(false);
+    }
+  }, [isRealUser, route.params.userId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -69,6 +91,62 @@ export default function PublicProfileScreen({ navigation, route }: Props) {
     );
   }
 
+
+  const openSafetyActions = () => {
+    if (!isRealUser) return;
+
+    const blockLabel = blockedByMe ? 'Sblocca utente' : 'Blocca utente';
+    Alert.alert(
+      'Sicurezza',
+      'Scegli un’azione per questo profilo.',
+      [
+        {
+          text: 'Segnala utente',
+          onPress: () =>
+            navigation.navigate('ReportContent', {
+              targetType: 'user',
+              targetId: route.params.userId,
+            }),
+        },
+        {
+          text: blockLabel,
+          style: blockedByMe ? 'default' : 'destructive',
+          onPress: () => {
+            const action = blockedByMe ? unblockUser : blockUser;
+            Alert.alert(
+              blockedByMe ? 'Sbloccare questo utente?' : 'Bloccare questo utente?',
+              blockedByMe
+                ? 'Potrete nuovamente contattarvi in chat privata.'
+                : 'Non potrete avviare o continuare chat private tra voi. Gli eventuali progetti condivisi continueranno a funzionare.',
+              [
+                { text: 'Annulla', style: 'cancel' },
+                {
+                  text: blockedByMe ? 'Sblocca' : 'Blocca',
+                  style: blockedByMe ? 'default' : 'destructive',
+                  onPress: async () => {
+                    setSafetyLoading(true);
+                    try {
+                      await action(route.params.userId);
+                      setBlockedByMe(!blockedByMe);
+                    } catch (error) {
+                      Alert.alert(
+                        'Operazione non riuscita',
+                        error instanceof Error ? error.message : 'Errore imprevisto.'
+                      );
+                    } finally {
+                      setSafetyLoading(false);
+                    }
+                  },
+                },
+              ]
+            );
+          },
+        },
+        { text: 'Annulla', style: 'cancel' },
+      ]
+    );
+  };
+
   const { profile, createdProjects, participatedProjects, experiences } =
     overview;
   const publicExperiences = experiences.filter(
@@ -85,7 +163,21 @@ export default function PublicProfileScreen({ navigation, route }: Props) {
           <Ionicons name="chevron-back" size={24} color={colors.textStrong} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profilo builder</Text>
-        <View style={styles.headerSpacer} />
+        {isRealUser ? (
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={openSafetyActions}
+            disabled={safetyLoading}
+          >
+            {safetyLoading ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Ionicons name="ellipsis-horizontal" size={20} color={colors.primary} />
+            )}
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.headerSpacer} />
+        )}
       </View>
 
       <ScrollView
@@ -102,6 +194,12 @@ export default function PublicProfileScreen({ navigation, route }: Props) {
           </View>
           <Text style={styles.name}>{getProfileDisplayName(profile)}</Text>
           <Text style={styles.headline}>{profile.headline ?? 'Builder'}</Text>
+          {blockedByMe ? (
+            <View style={styles.blockedBadge}>
+              <Ionicons name="ban-outline" size={14} color={colors.error} />
+              <Text style={styles.blockedText}>Utente bloccato</Text>
+            </View>
+          ) : null}
 
           <View style={styles.metaWrap}>
             <View style={styles.metaRow}>
@@ -399,6 +497,19 @@ const makeStyles = (c: ColorPalette, top: number, bottom: number) =>
     avatarText: { fontSize: 25, fontWeight: '900', color: c.primary },
     name: { fontSize: 22, fontWeight: '900', color: c.textStrong },
     headline: { fontSize: 14, fontWeight: '800', color: c.primary },
+    blockedBadge: {
+      marginTop: 4,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingHorizontal: 9,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: c.dangerSoft,
+      borderWidth: 1,
+      borderColor: c.dangerBorder,
+    },
+    blockedText: { fontSize: 10, fontWeight: '900', color: c.error },
     metaWrap: {
       marginTop: 6,
       flexDirection: 'row',
