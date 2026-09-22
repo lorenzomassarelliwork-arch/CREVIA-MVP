@@ -26,4 +26,5 @@ export type RootStackParamList = {
   CompleteProject: { projectId: string };
   EditProfile: undefined;
   PublicProfile: { userId: string };
+  ReportContent: { targetType: 'user' | 'project' | 'message'; targetId: string };
 };
