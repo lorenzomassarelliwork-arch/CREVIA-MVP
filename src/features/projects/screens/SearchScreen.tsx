@@ -48,6 +48,9 @@ type Result = {
   roles: ProjectRole[];
 };
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export default function SearchScreen({ navigation }: Props) {
   const { colors } = useAppPreferences();
   const insets = useSafeAreaInsets();
@@ -66,8 +69,10 @@ export default function SearchScreen({ navigation }: Props) {
       listProfiles(),
     ]);
 
+    const realProjects = projects.filter((project) => UUID_PATTERN.test(project.id));
+
     const results = await Promise.all(
-      projects.map(async (project) => ({
+      realProjects.map(async (project) => ({
         project,
         roles: (await getProjectDetail(project.id))?.roles ?? [],
       }))
