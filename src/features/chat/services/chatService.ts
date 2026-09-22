@@ -101,6 +101,9 @@ function normalizeChatError(message: string): string {
   if (lower.includes('invalid chat participant')) {
     return 'Non puoi avviare una chat con questo utente.';
   }
+  if (lower.includes('direct_contact_blocked')) {
+    return 'I messaggi privati tra questi account sono disattivati.';
+  }
   return message;
 }
 
@@ -292,7 +295,10 @@ export async function sendMessage(
     .select('*')
     .single();
 
-  if (error) throw new Error(normalizeModerationError(error.message));
+  if (error) {
+    const normalized = normalizeChatError(error.message);
+    throw new Error(normalizeModerationError(normalized));
+  }
   const row = data as MessageRow;
   return mapMessage(row, await getSenderName(row.sender_id));
 }
