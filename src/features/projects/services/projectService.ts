@@ -4,6 +4,7 @@ import type {
   ProjectLocationMode,
   ProjectRole,
   ProjectStatus,
+  UserProfile,
   ProjectType,
 } from '../../../domain/models';
 import { CURRENT_USER_ID } from '../../../core/session';
@@ -11,6 +12,7 @@ import { supabase } from '../../../lib/supabase';
 import { assertAllowedContent, normalizeModerationError } from '../../../lib/contentModeration';
 import { MVP_PROJECTS, MVP_PROJECT_ROLES } from '../data/mvpProjectData';
 import {
+  getProfile,
   getProfileDisplayName,
   getProfileSnapshot,
 } from '../../profile/services/profileService';
@@ -18,6 +20,7 @@ import {
 export type ProjectDetailData = {
   project: Project;
   roles: ProjectRole[];
+  ownerProfile: UserProfile | null;
   canManage: boolean;
   isPrimaryOwner: boolean;
 };
@@ -261,6 +264,7 @@ export async function getProjectDetail(
     return {
       project: demo,
       roles: roleCache.filter((role) => role.projectId === projectId),
+      ownerProfile: null,
       canManage: isProjectOwner(demo),
       isPrimaryOwner: isProjectOwner(demo),
     };
@@ -291,8 +295,12 @@ export async function getProjectDetail(
   if (adminError) throw new Error(adminError.message);
   if (!projectData) return null;
 
-  const project = mapProjectRow(projectData as ProjectRow, authUserId);
+  const rawProject = projectData as ProjectRow;
+  const project = mapProjectRow(rawProject, authUserId);
   const roles = ((roleData ?? []) as ProjectRoleRow[]).map(mapRoleRow);
+  const ownerProfile = await getProfile(
+    rawProject.owner_id === authUserId ? CURRENT_USER_ID : rawProject.owner_id
+  );
 
   projectCache = [
     project,
@@ -300,10 +308,11 @@ export async function getProjectDetail(
   ];
   cacheRoles(roles, project.id);
 
-  const isPrimaryOwner = (projectData as ProjectRow).owner_id === authUserId;
+  const isPrimaryOwner = rawProject.owner_id === authUserId;
   return {
     project,
     roles,
+    ownerProfile,
     isPrimaryOwner,
     canManage: isPrimaryOwner || Boolean(adminData),
   };
