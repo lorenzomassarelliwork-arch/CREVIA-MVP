@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../../../navigation/types';
 import type { ColorPalette } from '../../../theme/colors';
 import { useAppPreferences } from '../../../theme/AppPreferencesProvider';
+import { getDirectBlockStatus } from '../../safety/services/safetyService';
 import {
   getChatHeader,
   getCurrentChatUserId,
@@ -53,6 +54,8 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
   const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [directContactBlocked, setDirectContactBlocked] = useState(false);
+  const [blockedByMe, setBlockedByMe] = useState(false);
 
   const load = useCallback(async () => {
     const [chatHeader, items, userId] = await Promise.all([
@@ -60,9 +63,20 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
       listMessages(route.params.conversationId),
       getCurrentChatUserId(),
     ]);
+
+    let blocked = false;
+    let blockedByCurrentUser = false;
+    if (chatHeader.kind === 'direct' && chatHeader.otherUserId) {
+      const status = await getDirectBlockStatus(chatHeader.otherUserId).catch(() => null);
+      blocked = status?.directContactBlocked ?? false;
+      blockedByCurrentUser = status?.blockedByMe ?? false;
+    }
+
     setHeader(chatHeader);
     setMessages(items);
     setCurrentUserId(userId);
+    setDirectContactBlocked(blocked);
+    setBlockedByMe(blockedByCurrentUser);
     await markChatRead(route.params.conversationId);
   }, [route.params.conversationId]);
 
@@ -107,7 +121,7 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
   }, [route.params.conversationId]);
 
   const submit = async () => {
-    if (sending || !draft.trim()) return;
+    if (sending || directContactBlocked || !draft.trim()) return;
     setSending(true);
     try {
       const sent = await sendMessage(route.params.conversationId, draft);
@@ -196,7 +210,32 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
                   key={message.id}
                   style={[styles.messageRow, mine ? styles.messageRowMine : styles.messageRowOther]}
                 >
-                  <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleOther]}>
+                  <TouchableOpacity
+                    style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleOther]}
+                    activeOpacity={mine ? 1 : 0.82}
+                    disabled={mine}
+                    delayLongPress={350}
+                    onLongPress={
+                      mine
+                        ? undefined
+                        : () =>
+                            Alert.alert(
+                              'Messaggio',
+                              'Vuoi segnalare questo messaggio a Crevia?',
+                              [
+                                { text: 'Annulla', style: 'cancel' },
+                                {
+                                  text: 'Segnala',
+                                  onPress: () =>
+                                    navigation.navigate('ReportContent', {
+                                      targetType: 'message',
+                                      targetId: message.id,
+                                    }),
+                                },
+                              ]
+                            )
+                    }
+                  >
                     {header?.kind === 'project' ? (
                       <Text style={[styles.senderName, mine && styles.senderNameMine]}>
                         {mine ? 'Tu' : message.senderName ?? 'Builder'}
@@ -206,7 +245,7 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
                       {message.body}
                     </Text>
                     <Text style={[styles.time, mine && styles.timeMine]}>{formatTime(message.createdAt)}</Text>
-                  </View>
+                  </TouchableOpacity>
                 </View>
               );
             })
@@ -214,28 +253,39 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
         </ScrollView>
       )}
 
-      <View style={styles.composer}>
-        <TextInput
-          value={draft}
-          onChangeText={setDraft}
-          placeholder="Scrivi un messaggio..."
-          placeholderTextColor={colors.gray}
-          multiline
-          maxLength={4000}
-          style={styles.input}
-        />
-        <TouchableOpacity
-          style={[styles.sendButton, (!draft.trim() || sending) && styles.sendButtonDisabled]}
-          onPress={() => void submit()}
-          disabled={!draft.trim() || sending}
-        >
-          {sending ? (
-            <ActivityIndicator size="small" color={colors.white} />
-          ) : (
-            <Ionicons name="send" size={18} color={colors.white} />
-          )}
-        </TouchableOpacity>
-      </View>
+      {directContactBlocked && header?.kind === 'direct' ? (
+        <View style={styles.blockedComposer}>
+          <Ionicons name="ban-outline" size={18} color={colors.error} />
+          <Text style={styles.blockedComposerText}>
+            {blockedByMe
+              ? 'Hai bloccato questo utente. Sbloccalo dal profilo per riprendere la chat privata.'
+              : 'I messaggi privati tra questi account sono disattivati.'}
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.composer}>
+          <TextInput
+            value={draft}
+            onChangeText={setDraft}
+            placeholder="Scrivi un messaggio..."
+            placeholderTextColor={colors.gray}
+            multiline
+            maxLength={4000}
+            style={styles.input}
+          />
+          <TouchableOpacity
+            style={[styles.sendButton, (!draft.trim() || sending) && styles.sendButtonDisabled]}
+            onPress={() => void submit()}
+            disabled={!draft.trim() || sending}
+          >
+            {sending ? (
+              <ActivityIndicator size="small" color={colors.white} />
+            ) : (
+              <Ionicons name="send" size={18} color={colors.white} />
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -283,6 +333,18 @@ const makeStyles = (c: ColorPalette, top: number, bottom: number) =>
     messageTextMine: { color: c.white },
     time: { fontSize: 9, color: c.gray, alignSelf: 'flex-end' },
     timeMine: { color: c.white },
+    blockedComposer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 9,
+      paddingHorizontal: 16,
+      paddingTop: 12,
+      paddingBottom: Math.max(bottom, 10) + 10,
+      backgroundColor: c.dangerSoft,
+      borderTopWidth: 1,
+      borderTopColor: c.dangerBorder,
+    },
+    blockedComposerText: { flex: 1, fontSize: 11, lineHeight: 17, color: c.error, fontWeight: '700' },
     composer: {
       flexDirection: 'row',
       alignItems: 'flex-end',
