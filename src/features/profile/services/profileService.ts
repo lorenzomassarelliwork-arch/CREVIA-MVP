@@ -152,7 +152,19 @@ export async function getProfile(userId: string): Promise<UserProfile | null> {
 }
 
 export async function listProfiles(): Promise<UserProfile[]> {
-  return [...profiles];
+  const authUserId = await getAuthenticatedUserId();
+  if (!authUserId) throw new Error('Sessione utente non disponibile.');
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) throw new Error(error.message);
+
+  return ((data ?? []) as ProfileRow[]).map((row) =>
+    mapProfileRow(row, row.id === authUserId ? CURRENT_USER_ID : row.id)
+  );
 }
 
 export async function updateCurrentProfile(
