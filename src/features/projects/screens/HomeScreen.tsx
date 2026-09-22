@@ -21,7 +21,7 @@ import type {
   MainTabParamList,
   RootStackParamList,
 } from '../../../navigation/types';
-import type { Project, ProjectRole } from '../../../domain/models';
+import type { Project, ProjectRole, UserProfile } from '../../../domain/models';
 import type { ColorPalette } from '../../../theme/colors';
 import { useAppPreferences } from '../../../theme/AppPreferencesProvider';
 import { listProjectMembers } from '../../applications/services/applicationService';
@@ -30,7 +30,11 @@ import {
   subscribeNotificationChanges,
 } from '../../notifications/services/notificationService';
 import { CURRENT_USER_ID } from '../../../core/session';
-import { getProfile } from '../../profile/services/profileService';
+import {
+  getProfile,
+  getProfileDisplayName,
+  listProfiles,
+} from '../../profile/services/profileService';
 import { getProjectDetail, listProjects } from '../services/projectService';
 import { listSavedProjectIds } from '../services/savedProjectService';
 
@@ -44,43 +48,6 @@ type HomeProject = {
   roles: ProjectRole[];
   builderCount: number;
 };
-
-type HomeBuilder = {
-  id: string;
-  displayName: string;
-  ruolo: string;
-  citta: string;
-  settore: string;
-  avatarUrl?: string;
-  isOnline: boolean;
-};
-
-const BUILDERS: HomeBuilder[] = [
-  {
-    id: 'builder-1',
-    displayName: 'Giulia Bianchi',
-    ruolo: 'UI/UX Designer',
-    citta: 'Milano',
-    settore: 'Design',
-    isOnline: true,
-  },
-  {
-    id: 'builder-2',
-    displayName: 'Marco Riva',
-    ruolo: 'Frontend Developer',
-    citta: 'Milano',
-    settore: 'Tech',
-    isOnline: false,
-  },
-  {
-    id: 'builder-3',
-    displayName: 'Sara Conti',
-    ruolo: 'Digital Marketing',
-    citta: 'Milano',
-    settore: 'Marketing',
-    isOnline: true,
-  },
-];
 
 function initials(name: string) {
   return name
@@ -101,21 +68,52 @@ export default function HomeScreen({ navigation }: Props) {
 
   const [refreshing, setRefreshing] = useState(false);
   const [projects, setProjects] = useState<HomeProject[]>([]);
+  const [builders, setBuilders] = useState<UserProfile[]>([]);
   const [currentFirstName, setCurrentFirstName] = useState('Builder');
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   const load = useCallback(async () => {
-    const [all, savedProjectIds, currentProfile, unreadCount] =
+    const [all, savedProjectIds, currentProfile, unreadCount, allProfiles] =
       await Promise.all([
         listProjects(),
         listSavedProjectIds(),
         getProfile(CURRENT_USER_ID),
         getUnreadNotificationCount(),
+        listProfiles(),
       ]);
 
     setCurrentFirstName(currentProfile?.firstName ?? 'Builder');
     setUnreadNotifications(unreadCount);
+
+    const currentSkills = new Set(
+      (currentProfile?.skills ?? []).map((skill) => skill.trim().toLowerCase())
+    );
+    const currentCity = currentProfile?.city?.trim().toLowerCase() ?? '';
+
+    const compatibleBuilders = allProfiles
+      .filter((profile) => profile.id !== CURRENT_USER_ID)
+      .map((profile) => {
+        const sharedSkills = profile.skills.filter((skill) =>
+          currentSkills.has(skill.trim().toLowerCase())
+        ).length;
+        const sameCity =
+          Boolean(currentCity) &&
+          profile.city?.trim().toLowerCase() === currentCity;
+        return {
+          profile,
+          score: sharedSkills * 3 + (sameCity ? 1 : 0),
+        };
+      })
+      .sort(
+        (a, b) =>
+          b.score - a.score ||
+          a.profile.firstName.localeCompare(b.profile.firstName, 'it')
+      )
+      .slice(0, 8)
+      .map(({ profile }) => profile);
+
+    setBuilders(compatibleBuilders);
 
     const detailed = await Promise.all(
       all.map(async (project) => {
@@ -340,7 +338,7 @@ export default function HomeScreen({ navigation }: Props) {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.horizontalList}
           >
-            {BUILDERS.map((user) => (
+            {builders.map((user) => (
               <TouchableOpacity
                 key={user.id}
                 activeOpacity={0.76}
@@ -357,22 +355,28 @@ export default function HomeScreen({ navigation }: Props) {
                     />
                   ) : (
                     <Text style={styles.builderInitials}>
-                      {initials(user.displayName)}
+                      {initials(getProfileDisplayName(user))}
                     </Text>
                   )}
-                  {user.isOnline ? <View style={styles.onlineDot} /> : null}
                 </View>
                 <Text numberOfLines={1} style={styles.builderName}>
-                  {user.displayName}
+                  {getProfileDisplayName(user)}
                 </Text>
                 <Text numberOfLines={1} style={styles.builderRole}>
-                  {user.ruolo}
+                  {user.headline ?? 'Builder'}
                 </Text>
                 <Text numberOfLines={1} style={styles.builderMeta}>
-                  {user.citta} - {user.settore}
+                  {user.city ?? 'Località non indicata'}
                 </Text>
               </TouchableOpacity>
             ))}
+            {builders.length === 0 ? (
+              <View style={styles.emptyBuilders}>
+                <Text style={styles.emptySavedText}>
+                  Nessun altro builder disponibile al momento.
+                </Text>
+              </View>
+            ) : null}
           </ScrollView>
         </View>
       </ScrollView>
@@ -541,17 +545,7 @@ const makeStyles = (c: ColorPalette, top: number, bottom: number) =>
     },
     builderInitials: { color: c.primary, fontSize: 16, fontWeight: 'bold' },
     builderAvatarImage: { width: '100%', height: '100%', borderRadius: 16 },
-    onlineDot: {
-      position: 'absolute',
-      right: 4,
-      bottom: 4,
-      width: 10,
-      height: 10,
-      borderRadius: 5,
-      backgroundColor: c.confirm,
-      borderWidth: 1,
-      borderColor: c.cardBackground,
-    },
+
     builderName: {
       fontSize: 14,
       fontWeight: 'bold',
@@ -565,6 +559,17 @@ const makeStyles = (c: ColorPalette, top: number, bottom: number) =>
       textAlign: 'center',
     },
     builderMeta: { fontSize: 12, color: c.gray, textAlign: 'center' },
+    emptyBuilders: {
+      width: 250,
+      minHeight: 110,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.cardBackground,
+      padding: 16,
+    },
     emptySaved: {
       minHeight: 90,
       alignItems: 'center',
