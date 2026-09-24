@@ -17,8 +17,12 @@ function parseParams(url: string): URLSearchParams {
   return new URLSearchParams(parts.filter(Boolean).join('&'));
 }
 
-export async function handleSupabaseAuthCallback(url: string): Promise<void> {
-  if (!url.startsWith('crevia://auth/callback')) return;
+export type AuthCallbackKind = 'recovery' | 'auth' | null;
+
+export async function handleSupabaseAuthCallback(
+  url: string
+): Promise<AuthCallbackKind> {
+  if (!url.startsWith('crevia://auth/callback')) return null;
 
   const params = parseParams(url);
   const errorDescription =
@@ -32,7 +36,7 @@ export async function handleSupabaseAuthCallback(url: string): Promise<void> {
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) throw error;
-    return;
+    return params.get('type') === 'recovery' ? 'recovery' : 'auth';
   }
 
   const accessToken = params.get('access_token');
@@ -45,5 +49,8 @@ export async function handleSupabaseAuthCallback(url: string): Promise<void> {
     });
 
     if (error) throw error;
+    return params.get('type') === 'recovery' ? 'recovery' : 'auth';
   }
+
+  return params.get('type') === 'recovery' ? 'recovery' : 'auth';
 }
