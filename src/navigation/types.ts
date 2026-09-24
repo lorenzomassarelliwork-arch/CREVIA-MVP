@@ -12,6 +12,7 @@ export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   ForgotPassword: undefined;
+  ResetPassword: undefined;
   Main: NavigatorScreenParams<MainTabParamList> | undefined;
   Notifications: undefined;
   ChatRoom: { conversationId: string };
