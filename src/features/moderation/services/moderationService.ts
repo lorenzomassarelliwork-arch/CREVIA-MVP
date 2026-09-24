@@ -42,7 +42,7 @@ export async function listModerationItems(): Promise<ModerationItem[]> {
         .order('created_at', { ascending: false }),
       supabase
         .from('experience_exclusions')
-        .select('id,response_status,created_at')
+        .select('id,response_status,moderation_status,created_at')
         .eq('response_status', 'reported')
         .order('created_at', { ascending: false }),
     ]);
@@ -67,7 +67,7 @@ export async function listModerationItems(): Promise<ModerationItem[]> {
   const exclusionItems: ModerationItem[] = (exclusions ?? []).map((row: any) => ({
     id: row.id,
     kind: 'experience_exclusion',
-    status: 'open',
+    status: row.moderation_status,
     title: 'Contestazione Crevia Experience',
     subtitle: 'Mancata assegnazione Experience',
     createdAt: row.created_at,
@@ -137,7 +137,7 @@ export async function getModerationDetail(
   return {
     id: data.id,
     kind,
-    status: 'open',
+    status: data.moderation_status,
     title: 'Contestazione Crevia Experience',
     reason: 'Mancata assegnazione Experience',
     notes: data.notes,
@@ -150,13 +150,20 @@ export async function getModerationDetail(
 }
 
 export async function setModerationStatus(
+  kind: ModerationItem['kind'],
   id: string,
   status: ModerationStatus
 ): Promise<void> {
-  const { error } = await supabase.rpc('set_content_report_status', {
-    report_id: id,
-    next_status: status,
-  });
+  const { error } =
+    kind === 'content_report'
+      ? await supabase.rpc('set_content_report_status', {
+          report_id: id,
+          next_status: status,
+        })
+      : await supabase.rpc('set_experience_exclusion_moderation_status', {
+          exclusion_id: id,
+          next_status: status,
+        });
 
   if (error) throw new Error(error.message);
 }
