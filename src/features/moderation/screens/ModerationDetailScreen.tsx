@@ -52,10 +52,10 @@ export default function ModerationDetailScreen({ navigation, route }: Props) {
   );
 
   const changeStatus = async (status: ModerationStatus) => {
-    if (!item || item.kind !== 'content_report') return;
+    if (!item) return;
     setUpdating(true);
     try {
-      await setModerationStatus(item.id, status);
+      await setModerationStatus(item.kind, item.id, status);
       await load();
     } catch (error) {
       Alert.alert(
@@ -106,37 +106,37 @@ export default function ModerationDetailScreen({ navigation, route }: Props) {
           ) : null}
           <Info label="Note" value={item.notes?.trim() || 'Nessuna nota.'} styles={styles} />
 
-          {item.kind === 'content_report' ? (
-            <View style={styles.actions}>
-              <TouchableOpacity
-                style={styles.reviewButton}
-                onPress={() => void changeStatus('reviewing')}
-                disabled={updating}
-              >
-                <Text style={styles.reviewText}>Prendi in carico</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.resolveButton}
-                onPress={() => void changeStatus('resolved')}
-                disabled={updating}
-              >
-                <Text style={styles.resolveText}>Risolvi</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.dismissButton}
-                onPress={() => void changeStatus('dismissed')}
-                disabled={updating}
-              >
-                <Text style={styles.dismissText}>Chiudi senza intervento</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
+          <View style={styles.actions}>
+            <TouchableOpacity
+              style={styles.reviewButton}
+              onPress={() => void changeStatus('reviewing')}
+              disabled={updating}
+            >
+              <Text style={styles.reviewText}>Prendi in carico</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.resolveButton}
+              onPress={() => void changeStatus('resolved')}
+              disabled={updating}
+            >
+              <Text style={styles.resolveText}>Risolvi</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.dismissButton}
+              onPress={() => void changeStatus('dismissed')}
+              disabled={updating}
+            >
+              <Text style={styles.dismissText}>Chiudi senza intervento</Text>
+            </TouchableOpacity>
+          </View>
+
+          {item.kind === 'experience_exclusion' ? (
             <View style={styles.notice}>
               <Text style={styles.noticeText}>
-                Le contestazioni Crevia Experience sono visibili alla moderazione. La gestione operativa dell’esito verrà aggiunta nel blocco successivo.
+                La chiusura della contestazione non assegna automaticamente una Crevia Experience e non modifica il profilo del partecipante.
               </Text>
             </View>
-          )}
+          ) : null}
         </ScrollView>
       )}
     </View>
