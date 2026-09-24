@@ -29,6 +29,7 @@ import ChatRoomScreen from './src/features/chat/screens/ChatRoomScreen';
 import NotificationsScreen from './src/features/notifications/screens/NotificationsScreen';
 import ProfileScreen from './src/features/profile/screens/ProfileScreen';
 import EditProfileScreen from './src/features/profile/screens/EditProfileScreen';
+import DeleteAccountScreen from './src/features/profile/screens/DeleteAccountScreen';
 import PublicProfileScreen from './src/features/profile/screens/PublicProfileScreen';
 import ReportContentScreen from './src/features/safety/screens/ReportContentScreen';
 import ModerationQueueScreen from './src/features/moderation/screens/ModerationQueueScreen';
@@ -190,6 +191,7 @@ function AppNavigator() {
               component={CompleteProjectScreen}
             />
             <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+            <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
             <Stack.Screen
               name="PublicProfile"
               component={PublicProfileScreen}
