@@ -99,17 +99,12 @@ export default function DeleteAccountScreen({ navigation }: Props) {
         <View style={styles.infoCard}>
           <Text style={styles.sectionTitle}>Cosa succede</Text>
           <Text style={styles.infoText}>
-            • I progetti in recruiting o in corso di cui sei founder vengono annullati.{'
-'}
-            • Le tue partecipazioni attive vengono chiuse.{'
-'}
-            • Le candidature in attesa vengono ritirate.{'
-'}
-            • Messaggi, motivazioni e altri dati personali vengono rimossi o anonimizzati.{'
-'}
-            • I dati storici necessari a mantenere coerenti progetti ed Experience restano associati a “Utente eliminato”.{'
-'}
-            • L’account di accesso viene eliminato.
+            {'• I progetti in recruiting o in corso di cui sei founder vengono annullati.\n'}
+            {'• Le tue partecipazioni attive vengono chiuse.\n'}
+            {'• Le candidature in attesa vengono ritirate.\n'}
+            {'• Messaggi, motivazioni e altri dati personali vengono rimossi o anonimizzati.\n'}
+            {'• I dati storici necessari a mantenere coerenti progetti ed Experience restano associati a “Utente eliminato”.\n'}
+            {'• L’account di accesso viene eliminato.'}
           </Text>
         </View>
 
