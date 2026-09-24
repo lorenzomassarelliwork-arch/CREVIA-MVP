@@ -2,6 +2,11 @@ import { supabase } from '../../../lib/supabase';
 import { assertAllowedContent, normalizeModerationError } from '../../../lib/contentModeration';
 
 export type ExperienceExclusionStatus = 'pending' | 'acknowledged' | 'reported';
+export type ExperienceExclusionModerationStatus =
+  | 'open'
+  | 'reviewing'
+  | 'resolved'
+  | 'dismissed';
 
 export type ExperienceExclusion = {
   id: string;
@@ -9,6 +14,7 @@ export type ExperienceExclusion = {
   userId: string;
   responseStatus: ExperienceExclusionStatus;
   notes: string | null;
+  moderationStatus: ExperienceExclusionModerationStatus;
   createdAt: string;
   respondedAt: string | null;
   projectTitle: string;
@@ -20,6 +26,7 @@ type ExclusionRow = {
   user_id: string;
   response_status: ExperienceExclusionStatus;
   notes: string | null;
+  moderation_status: ExperienceExclusionModerationStatus;
   created_at: string;
   responded_at: string | null;
 };
@@ -47,6 +54,7 @@ export async function getExperienceExclusion(id: string): Promise<ExperienceExcl
     userId: row.user_id,
     responseStatus: row.response_status,
     notes: row.notes,
+    moderationStatus: row.moderation_status,
     createdAt: row.created_at,
     respondedAt: row.responded_at,
     projectTitle: project?.title ?? 'Progetto',
