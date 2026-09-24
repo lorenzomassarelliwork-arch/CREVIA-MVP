@@ -26,6 +26,7 @@ export type RootStackParamList = {
   ProjectTeam: { projectId: string };
   CompleteProject: { projectId: string };
   EditProfile: undefined;
+  DeleteAccount: undefined;
   PublicProfile: { userId: string };
   ReportContent: { targetType: 'user' | 'project' | 'message'; targetId: string };
   ModerationQueue: undefined;
