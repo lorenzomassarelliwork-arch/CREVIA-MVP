@@ -11,6 +11,7 @@ import BottomNavBar from './src/navigation/BottomNavBar';
 import LoginScreen from './src/features/auth/screens/LoginScreen';
 import RegisterScreen from './src/features/auth/screens/RegisterScreen';
 import ForgotPasswordScreen from './src/features/auth/screens/ForgotPasswordScreen';
+import ResetPasswordScreen from './src/features/auth/screens/ResetPasswordScreen';
 import HomeScreen from './src/features/projects/screens/HomeScreen';
 import SearchScreen from './src/features/projects/screens/SearchScreen';
 import CreateProjectScreen from './src/features/projects/screens/CreateProjectScreen';
@@ -67,6 +68,7 @@ function AppNavigator() {
   const { colors, isDark } = useAppPreferences();
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(false);
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -74,7 +76,10 @@ function AppNavigator() {
     const handleUrl = async (url: string | null) => {
       if (!url) return;
       try {
-        await handleSupabaseAuthCallback(url);
+        const callbackKind = await handleSupabaseAuthCallback(url);
+        if (callbackKind === 'recovery') {
+          setPasswordRecovery(true);
+        }
       } catch (error) {
         console.error('Supabase auth callback failed', error);
       }
@@ -94,8 +99,13 @@ function AppNavigator() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession);
+      if (event === 'PASSWORD_RECOVERY') {
+        setPasswordRecovery(true);
+      } else if (event === 'SIGNED_OUT') {
+        setPasswordRecovery(false);
+      }
       setAuthReady(true);
     });
 
@@ -144,6 +154,15 @@ function AppNavigator() {
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <NavigationContainer theme={navigationTheme}>
         {session ? (
+          passwordRecovery ? (
+            <Stack.Navigator screenOptions={{ headerShown: false }}>
+              <Stack.Screen
+                name="ResetPassword"
+                component={ResetPasswordScreen}
+                options={{ gestureEnabled: false }}
+              />
+            </Stack.Navigator>
+          ) : (
           <Stack.Navigator screenOptions={{ headerShown: false }}>
             <Stack.Screen
               name="Main"
@@ -179,6 +198,7 @@ function AppNavigator() {
             <Stack.Screen name="ModerationQueue" component={ModerationQueueScreen} />
             <Stack.Screen name="ModerationDetail" component={ModerationDetailScreen} />
           </Stack.Navigator>
+          )
         ) : (
           <Stack.Navigator
             screenOptions={{ headerShown: false }}
