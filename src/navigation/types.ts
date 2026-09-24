@@ -27,4 +27,6 @@ export type RootStackParamList = {
   EditProfile: undefined;
   PublicProfile: { userId: string };
   ReportContent: { targetType: 'user' | 'project' | 'message'; targetId: string };
+  ModerationQueue: undefined;
+  ModerationDetail: { kind: 'content_report' | 'experience_exclusion'; id: string };
 };
