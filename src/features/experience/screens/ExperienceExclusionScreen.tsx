@@ -196,8 +196,15 @@ export default function ExperienceExclusionScreen({ navigation, route }: Props) 
                     ? 'Segnalazione inviata a Crevia'
                     : 'Hai preso atto dell’esito'}
                 </Text>
-                {item.responseStatus === 'reported' && item.notes ? (
-                  <Text style={styles.resultText}>{item.notes}</Text>
+                {item.responseStatus === 'reported' ? (
+                  <>
+                    <Text style={styles.moderationStatus}>
+                      Stato moderazione: {formatModerationStatus(item.moderationStatus)}
+                    </Text>
+                    {item.notes ? (
+                      <Text style={styles.resultText}>{item.notes}</Text>
+                    ) : null}
+                  </>
                 ) : null}
               </View>
             </View>
@@ -213,6 +220,16 @@ export default function ExperienceExclusionScreen({ navigation, route }: Props) 
       )}
     </View>
   );
+}
+
+function formatModerationStatus(status: ExperienceExclusion['moderationStatus']) {
+  return status === 'open'
+    ? 'Aperta'
+    : status === 'reviewing'
+      ? 'In revisione'
+      : status === 'resolved'
+        ? 'Risolta'
+        : 'Chiusa senza intervento';
 }
 
 const makeStyles = (c: ColorPalette, top: number, bottom: number) =>
@@ -325,6 +342,7 @@ const makeStyles = (c: ColorPalette, top: number, bottom: number) =>
     },
     flex: { flex: 1 },
     resultTitle: { fontSize: 13, fontWeight: '900', color: c.textStrong },
+    moderationStatus: { marginTop: 4, fontSize: 11, fontWeight: '900', color: c.primary },
     resultText: { marginTop: 4, fontSize: 12, lineHeight: 18, color: c.textMuted },
     projectButton: {
       minHeight: 46,
