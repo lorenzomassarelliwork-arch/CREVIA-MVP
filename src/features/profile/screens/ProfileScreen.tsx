@@ -32,6 +32,7 @@ import {
   getProfileDisplayName,
   getProfileInitials,
 } from '../services/profileService';
+import { getPlatformRole, type PlatformRole } from '../../moderation/services/moderationService';
 
 type Props = CompositeScreenProps<
   MaterialTopTabScreenProps<MainTabParamList, 'Profile'>,
@@ -47,12 +48,21 @@ export default function ProfileScreen({ navigation }: Props) {
   );
 
   const [overview, setOverview] = useState<ProfileOverview | null>(null);
+  const [platformRole, setPlatformRole] = useState<PlatformRole | null>(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
-    setOverview(await getProfileOverview(CURRENT_USER_ID));
-    setLoading(false);
+    try {
+      const [nextOverview, role] = await Promise.all([
+        getProfileOverview(CURRENT_USER_ID),
+        getPlatformRole().catch(() => null),
+      ]);
+      setOverview(nextOverview);
+      setPlatformRole(role);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useFocusEffect(
@@ -174,6 +184,24 @@ export default function ProfileScreen({ navigation }: Props) {
             </View>
           </View>
         </View>
+
+        {platformRole ? (
+          <TouchableOpacity
+            style={styles.moderationCard}
+            onPress={() => navigation.navigate('ModerationQueue')}
+          >
+            <View style={styles.moderationIcon}>
+              <Ionicons name="shield-checkmark-outline" size={22} color={colors.primary} />
+            </View>
+            <View style={styles.flex}>
+              <Text style={styles.moderationTitle}>Moderazione Crevia</Text>
+              <Text style={styles.moderationText}>
+                {platformRole === 'admin' ? 'Accesso amministratore' : 'Accesso moderatore'}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.gray} />
+          </TouchableOpacity>
+        ) : null}
 
         <SectionCard title="Su di me" styles={styles}>
           <Text style={styles.bodyText}>
@@ -559,6 +587,26 @@ const makeStyles = (c: ColorPalette, top: number, bottom: number) =>
     headline: { fontSize: 14, fontWeight: '800', color: c.primary },
     metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
     metaText: { fontSize: 12, color: c.gray },
+    moderationCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      padding: 14,
+      borderRadius: 16,
+      backgroundColor: c.cardBackground,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    moderationIcon: {
+      width: 44,
+      height: 44,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: c.primarySoft,
+    },
+    moderationTitle: { fontSize: 14, fontWeight: '900', color: c.textStrong },
+    moderationText: { marginTop: 2, fontSize: 11, color: c.textMuted },
     section: { gap: 10 },
     sectionTitleRow: {
       flexDirection: 'row',
