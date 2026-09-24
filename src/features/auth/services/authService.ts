@@ -82,6 +82,18 @@ export async function requestPasswordReset(email: string): Promise<void> {
   if (error) throw new Error(normalizeAuthError(error.message));
 }
 
+export async function updatePassword(newPassword: string): Promise<void> {
+  if (newPassword.length < 8) {
+    throw new Error('La nuova password deve contenere almeno 8 caratteri.');
+  }
+
+  const { error } = await supabase.auth.updateUser({
+    password: newPassword,
+  });
+
+  if (error) throw new Error(normalizeAuthError(error.message));
+}
+
 export async function logoutUser(): Promise<void> {
   const { error } = await supabase.auth.signOut();
   if (error) throw new Error(normalizeAuthError(error.message));
