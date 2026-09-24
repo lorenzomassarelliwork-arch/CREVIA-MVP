@@ -377,6 +377,23 @@ export default function ProfileScreen({ navigation }: Props) {
           styles={styles}
           colors={colors}
         />
+
+        <View style={styles.dangerSection}>
+          <Text style={styles.dangerSectionTitle}>Account</Text>
+          <TouchableOpacity
+            style={styles.deleteAccountButton}
+            onPress={() => navigation.navigate('DeleteAccount')}
+          >
+            <Ionicons name="trash-outline" size={18} color={colors.error} />
+            <View style={styles.flex}>
+              <Text style={styles.deleteAccountTitle}>Elimina account</Text>
+              <Text style={styles.deleteAccountText}>
+                Elimina definitivamente l’accesso e anonimizza i dati personali.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.gray} />
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </View>
   );
@@ -607,6 +624,20 @@ const makeStyles = (c: ColorPalette, top: number, bottom: number) =>
     },
     moderationTitle: { fontSize: 14, fontWeight: '900', color: c.textStrong },
     moderationText: { marginTop: 2, fontSize: 11, color: c.textMuted },
+    dangerSection: { gap: 10 },
+    dangerSectionTitle: { fontSize: 19, fontWeight: '900', color: c.textStrong },
+    deleteAccountButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      padding: 14,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: c.dangerBorder,
+      backgroundColor: c.dangerSoft,
+    },
+    deleteAccountTitle: { fontSize: 13, fontWeight: '900', color: c.error },
+    deleteAccountText: { marginTop: 2, fontSize: 11, lineHeight: 16, color: c.textMuted },
     section: { gap: 10 },
     sectionTitleRow: {
       flexDirection: 'row',
