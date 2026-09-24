@@ -76,7 +76,7 @@ export async function registerUser(
 export async function requestPasswordReset(email: string): Promise<void> {
   const { error } = await supabase.auth.resetPasswordForEmail(
     email.trim().toLowerCase(),
-    { redirectTo: 'crevia://auth/callback' }
+    { redirectTo: 'crevia://auth/callback?type=recovery' }
   );
 
   if (error) throw new Error(normalizeAuthError(error.message));
